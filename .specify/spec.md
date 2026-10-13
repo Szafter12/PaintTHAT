@@ -72,9 +72,9 @@ Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegając
 ### Diagram Przypadków Użycia (UML Use Case)
 Poniższy diagram obrazuje granice systemu oraz interakcje pomiędzy Hostem a Graczem.
 
-![Diagram Przypadków Użycia](docs/img/use_case.png)
+![Diagram Przypadków Użycia](../docs/img/use_case.png)
 
 ### Diagram Wymagań SysML (z podziałem na FR i NFR)
 Hierarchia wymagań funkcjonalnych oraz niefunkcjonalnych (sklasyfikowanych wg normy SQuaRE) powiązanych z metrykami.
 
-![Diagram Wymagań](docs/img/requirements.png)
+![Diagram Wymagań](../docs/img/requirements.png)
