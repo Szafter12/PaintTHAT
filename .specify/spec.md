@@ -1,17 +1,17 @@
-# Specyfikacja Projektu: Party Game
+# Specyfikacja Projektu: Scribblers
 
-## 1. Cel projektu
+## Cel projektu
 Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegającej na rysowaniu i zgadywaniu haseł w czasie rzeczywistym. System działa w architekturze hybrydowej z podziałem na aplikację Hosta (ekran główny) oraz aplikacje mobilne Graczy (kontrolery).
 
 ---
 
-## 2. Aktorzy
+## Aktorzy
 - **Host:** Organizator gry. Operuje na dużym ekranie (np. komputer/telewizor). Jego celem jest stworzenie pokoju i zarządzanie rozgrywką. Wymaga konta w systemie.
 - **Gracz:** Uczestnik gry. Używa smartfona jako kontrolera/narzędzia do rysowania. Zależy mu na błyskawicznym dołączeniu do pokoju bez konieczności zakładania konta.
 
 ---
 
-## 3. User Stories
+## User Stories
 
 ### US-01: Niestandardowe pule słów
 **Jako** host gry, **chcę** móc dodawać niestandardowe słowa do puli haseł, **aby** urozmaicić rozgrywkę ze znajomymi.
@@ -45,7 +45,7 @@ Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegając
 
 ---
 
-## 4. Wymagania Funkcjonalne
+## Wymagania Funkcjonalne
 | ID | Nazwa | Opis | Powiązanie |
 |---|---|---|---|
 | **REQ-FR-01** | Niestandardowe pule haseł | System pozwala Hostowi na wprowadzenie własnej listy słów podczas konfiguracji pokoju. | US-01 |
@@ -56,7 +56,7 @@ Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegając
 
 ---
 
-## 5. Wymagania Niefunkcjonalne wg ISO/IEC 25002
+## Wymagania Niefunkcjonalne wg ISO/IEC 25002
 | ID | Kategoria SQuaRE | Nazwa | Kryterium / Metryka |
 |---|---|---|---|
 | **REQ-NFR-01** | Performance Efficiency | Opóźnienie transmisji | Opóźnienie dla przesyłu koordynatów X,Y < 50ms. |
@@ -67,14 +67,14 @@ Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegając
 
 ---
 
-## 6. Diagramy
+## Diagramy
 
-### Diagram Przypadków Użycia (UML Use Case)
+### Diagram Przypadków Użycia (UML use-case)
 Poniższy diagram obrazuje granice systemu oraz interakcje pomiędzy Hostem a Graczem.
 
-![Diagram Przypadków Użycia](docs/img/use_case.png)
+![Diagram Przypadków Użycia](../docs/img/use_case.png)
 
 ### Diagram Wymagań SysML (z podziałem na FR i NFR)
-Hierarchia wymagań funkcjonalnych oraz niefunkcjonalnych (sklasyfikowanych wg normy SQuaRE) powiązanych z metrykami.
+Hierarchia wymagań funkcjonalnych oraz niefunkcjonalnych sklasyfikowanych wg normy SQuaRE powiązanych z metrykami.
 
-![Diagram Wymagań](docs/img/requirements.png)
+![Diagram Wymagań](../docs/img/requirements.png)
