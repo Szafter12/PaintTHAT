@@ -1,0 +1,17 @@
+# Build folders
+cmake-build-debug/
+build/
+out/
+bin/
+
+# Cache and configuration files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+compile_commands.json
+
+# Others
+vcpkg_installed/
+.vcpkg-root
+.idea/

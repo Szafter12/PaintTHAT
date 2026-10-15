@@ -1,3 +1,9 @@
-cmake-build-debug
-build
-.idea
+# Editors and IDE
+.idea/
+.vscode/
+.vs/
+*.user
+
+# OS specific
+.DS_Store
+Thumbs.db
