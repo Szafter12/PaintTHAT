@@ -1,7 +1,7 @@
-# Specyfikacja Projektu: Scribblers
+# Specyfikacja Projektu: PaintTHAT
 
 ## Cel projektu
-Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegającej na rysowaniu i zgadywaniu haseł w czasie rzeczywistym. System działa w architekturze hybrydowej z podziałem na aplikację Hosta (ekran główny) oraz aplikacje mobilne Graczy (kontrolery).
+Celem projektu jest stworzenie lokalnej internetowej gry towarzyskiej polegającej na rysowaniu i zgadywaniu haseł w czasie rzeczywistym. System działa w architekturze hybrydowej z podziałem na aplikację Hosta (ekran główny) oraz aplikacje mobilne Graczy.
 
 ---
 
