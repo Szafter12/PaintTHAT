@@ -4,7 +4,7 @@
 
 class LobbyState : public IRoomState {
 public:
-    void handlePacket(Room &room, json &packet) override;
+    void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
 #endif //GAMESERVER_ROOMSTATES_HPP
