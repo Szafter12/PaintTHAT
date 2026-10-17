@@ -1,17 +1,56 @@
 #include <iostream>
+#include <mutex>
+#include <memory>
+#include <unordered_map>
 #include "crow.h"
+#include <nlohmann/json.hpp>
+#include "../include/Room.hpp"
+
+using json = nlohmann::json;
 
 int main() {
     auto app = crow::SimpleApp();
 
+    std::unordered_map<std::string, std::unique_ptr<Room> > rooms;
+    std::mutex roomsMutex;
+
     CROW_WEBSOCKET_ROUTE(app, "/ws")
-        .onopen([&](crow::websocket::connection &conn) {
+            .onopen([&](crow::websocket::connection &conn) {
+                std::cout << "New connection\n";
+            })
+            .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
+                std::cout << "Connection closed: " << reason << "\n";
+            })
+            .onmessage([&](crow::websocket::connection &conn, const std::string &data, bool is_binary) {
+                try {
+                    json packet = json::parse(data);
+                    std::string PIN = packet.at("pin");
+                    std::string type = packet.at("type");
 
-        })
-        .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
+                    std::lock_guard<std::mutex> lock(roomsMutex);
 
-        })
-        .onmessage([&](crow::websocket::connection &conn, const std::string &data, bool is_binary) {});
+                    if (type == "HOST_INIT") {
+                        auto [it, inserted] = rooms.try_emplace(PIN, std::make_unique<Room>(PIN));
+
+                        if (!inserted) {
+                            conn.send_text(
+                                R"({"type": "ERROR", "payload": {"code": "ROOM_EXISTS", "message": "Pokoj o tym PIN-ie juz istnieje!"}})");
+                            return;
+                        }
+                    } else {
+                        auto it = rooms.find(PIN);
+                        if (it != rooms.end()) {
+                            conn.send_text(
+                                R"({"type": "ERROR", "payload": {"code": "ROOM_NOT_FOUND", "message": "Nie znaleziono pokoju!"}})");
+                            return;
+                        }
+
+                        it->second->onPacket(conn, packet);
+                    }
+                } catch (json::basic_json::out_of_range &e) {
+                    std::cerr << e.what() << std::endl;
+                }
+            });
 
     app.port(18080).multithreaded().run();
 

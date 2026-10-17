@@ -1,8 +1,10 @@
 #include "../include/Player.hpp"
 
-Player::Player(const std::string &nick) : nickname{nick} {}
+Player::Player(const std::string &nick, crow::websocket::connection &conn)
+    : nickname{nick}, conn(&conn) {
+}
 
-void Player::addPoints(int amount) {
+void Player::addPoints(const int amount) {
     this->points += amount;
 }
 
@@ -12,4 +14,8 @@ std::string Player::getNick() const {
 
 int Player::getPoints() const {
     return this->points;
+}
+
+crow::websocket::connection *Player::getConnection() const {
+    return this->conn;
 }

@@ -6,15 +6,20 @@
 
 class Player {
 public:
-    Player(const std::string &nick);
+    Player(const std::string &nick, crow::websocket::connection &conn);
+
     void addPoints(int amount);
 
     [[nodiscard]] std::string getNick() const;
-    [[nodiscard]] int getPoints() const ;
+
+    [[nodiscard]] int getPoints() const;
+
+    [[nodiscard]] crow::websocket::connection *getConnection() const;
+
 private:
     std::string nickname{"No name"};
     int points{0};
-    crow::websocket::connection* conn;
+    crow::websocket::connection *conn{nullptr};
 };
 
 #endif //GAMESERVER_PLAYER_HPP
