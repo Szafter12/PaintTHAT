@@ -1,6 +1,6 @@
 #ifndef GAMESERVER_IROOMSTATE_HPP
 #define GAMESERVER_IROOMSTATE_HPP
-#include <string>
+
 #include <nlohmann/json.hpp>
 #include "crow.h"
 

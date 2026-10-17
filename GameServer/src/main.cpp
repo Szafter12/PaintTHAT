@@ -30,7 +30,7 @@ int main() {
                     std::lock_guard<std::mutex> lock(roomsMutex);
 
                     if (type == "HOST_INIT") {
-                        auto [it, inserted] = rooms.try_emplace(PIN, std::make_unique<Room>(PIN));
+                        auto [it, inserted] = rooms.try_emplace(PIN, std::make_unique<Room>(conn, PIN));
 
                         if (!inserted) {
                             conn.send_text(
@@ -38,7 +38,7 @@ int main() {
                             return;
                         }
                     } else {
-                        auto it = rooms.find(PIN);
+                        const auto it = rooms.find(PIN);
                         if (it != rooms.end()) {
                             conn.send_text(
                                 R"({"type": "ERROR", "payload": {"code": "ROOM_NOT_FOUND", "message": "Nie znaleziono pokoju!"}})");
@@ -47,8 +47,9 @@ int main() {
 
                         it->second->onPacket(conn, packet);
                     }
-                } catch (json::basic_json::out_of_range &e) {
-                    std::cerr << e.what() << std::endl;
+                } catch (const json::exception &e) {
+                    std::cerr << "JSON ERROR: " << e.what() << std::endl;
+                    conn.send_text(R"({"type": "ERROR", "payload": {"code": "BAD_JSON", "message": "Niepoprawny format danych!"}})");
                 }
             });
 
