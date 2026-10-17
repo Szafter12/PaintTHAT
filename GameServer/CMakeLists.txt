@@ -27,9 +27,10 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
         "src/*.cpp"
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
+        src/RoomStates.cpp)
 
-target_include_directories(${PROJECT_NAME} PRIVATE "src")
+target_include_directories(${PROJECT_NAME} PRIVATE "include")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Crow::Crow
