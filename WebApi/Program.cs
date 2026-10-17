@@ -18,6 +18,6 @@ app.MapGet("/", () =>
 {	
 	return "Hello, World";
 })
-.WithName("GetWeatherForecast");
+.WithName("Home");
 
 app.Run();
