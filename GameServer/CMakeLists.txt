@@ -27,17 +27,22 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
         "src/*.cpp"
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
-        src/RoomStates.cpp)
+find_package(Threads REQUIRED)
+
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE "include")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+if (MSVC)
+    target_compile_options(GameServer PRIVATE /utf-8)
+endif ()
+
+target_link_libraries(GameServer PRIVATE
         Crow::Crow
         nlohmann_json::nlohmann_json
-        pthread
+        Threads::Threads
 )
 
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 wsock32)
-endif()
+if (WIN32)
+    target_link_libraries(GameServer PRIVATE ws2_32 wsock32)
+endif ()

@@ -37,6 +37,8 @@ int main() {
                                 R"({"type": "ERROR", "payload": {"code": "ROOM_EXISTS", "message": "Pokoj o tym PIN-ie juz istnieje!"}})");
                             return;
                         }
+
+                        std::cout << "New room created with PIN: " << PIN << "\n";
                     } else {
                         const auto it = rooms.find(PIN);
                         if (it != rooms.end()) {
@@ -49,7 +51,8 @@ int main() {
                     }
                 } catch (const json::exception &e) {
                     std::cerr << "JSON ERROR: " << e.what() << std::endl;
-                    conn.send_text(R"({"type": "ERROR", "payload": {"code": "BAD_JSON", "message": "Niepoprawny format danych!"}})");
+                    conn.send_text(
+                        R"({"type": "ERROR", "payload": {"code": "BAD_JSON", "message": "Niepoprawny format danych!"}})");
                 }
             });
 
