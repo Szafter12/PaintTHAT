@@ -41,7 +41,7 @@ int main() {
                         std::cout << "New room created with PIN: " << PIN << "\n";
                     } else {
                         const auto it = rooms.find(PIN);
-                        if (it != rooms.end()) {
+                        if (it == rooms.end()) {
                             conn.send_text(
                                 R"({"type": "ERROR", "payload": {"code": "ROOM_NOT_FOUND", "message": "Nie znaleziono pokoju!"}})");
                             return;

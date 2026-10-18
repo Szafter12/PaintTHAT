@@ -16,7 +16,7 @@ public:
 
     [[nodiscard]] bool getIsDrawer() const;
 
-    void setDrawer();
+    void setIsDrawer(bool drawer);
 
     [[nodiscard]] crow::websocket::connection *getConn() const;
 

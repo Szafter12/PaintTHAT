@@ -1,12 +1,24 @@
 #include "../include/Room.hpp"
 #include "../include/RoomStates.hpp"
 
-Room::Room(crow::websocket::connection &conn, const std::string &pin) : hostConn(&conn), pin(pin), roundTime(60) {
+namespace {
+    std::mt19937 &getRng() {
+        static std::mt19937 rng{std::random_device{}()};
+        return rng;
+    }
+}
+
+Room::Room(crow::websocket::connection &conn, const std::string &pin)
+    : hostConn(&conn), pin(pin), roundTime(60), maxRounds(4) {
     this->currentState = std::make_unique<LobbyState>();
 }
 
 void Room::changeState(std::unique_ptr<IRoomState> newState) {
     this->currentState = std::move(newState);
+
+    if (this->currentState) {
+        this->currentState->onEnter(*this);
+    }
 }
 
 void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
@@ -24,7 +36,18 @@ void Room::roundCountdown(int seconds) {
     this->round_ends_holder = true;
 }
 
-void Room::broadcastMsg(const json &packet) {
+void Room::broadcastAll(const json &packet) const {
+    const std::string serialized = packet.dump();
+
+    if (this->hostConn != nullptr) {
+        this->hostConn->send_text(serialized);
+    }
+
+    for (const auto &player: this->players) {
+        if (player.getConn() != nullptr) {
+            player.getConn()->send_text(serialized);
+        }
+    }
 }
 
 Player *Room::getCurrentDrawer() {
@@ -35,6 +58,14 @@ Player *Room::getCurrentDrawer() {
     return nullptr;
 }
 
+void Room::setPlayerArray(json &playersArray) const {
+    for (const auto &player: this->players) {
+        playersArray.push_back({
+            {"nickname", player.getNick()},
+            {"points", player.getPoints()}
+        });
+    }
+}
 
 int Room::getPlayersCount() const {
     return this->players.size();
@@ -42,4 +73,102 @@ int Room::getPlayersCount() const {
 
 bool Room::is_round_ends() {
     return this->round_ends_holder;
+}
+
+std::string Room::getPin() const {
+    return this->pin;
+}
+
+void Room::prepareNewRoundQueue() {
+    this->drawStack.clear();
+
+    for (size_t i{0}; i < this->getPlayersCount(); ++i) {
+        if (this->players[i].getConn() != nullptr) {
+            this->drawStack.push_back(i);
+        }
+    }
+
+    static std::mt19937 rng{std::random_device{}()};
+    std::ranges::shuffle(this->drawStack, rng);
+
+    this->currentRound++;
+}
+
+Player *Room::popNextDrawer() {
+    for (auto &p: players) {
+        p.setIsDrawer(false);
+    }
+
+    while (!this->drawStack.empty()) {
+        size_t idx = this->drawStack.back();
+        this->drawStack.pop_back();
+
+        if (this->players[idx].getConn() != nullptr) {
+            this->players[idx].setIsDrawer(true);
+            return &this->players[idx];
+        }
+    }
+
+    return nullptr;
+}
+
+void Room::sendJson(crow::websocket::connection *conn, const nlohmann::json &packet) {
+    if (conn != nullptr) {
+        conn->send_text(packet.dump());
+    }
+}
+
+void Room::broadcastExcept(const crow::websocket::connection *conn, const json &packet) const {
+    for (auto &player: this->players) {
+        if (player.getConn() == conn) continue;
+        player.getConn()->send_text(packet.dump());
+    }
+}
+
+void Room::initWordPool(const std::vector<std::string> &words) {
+    this->backupWordsPool = words;
+    this->wordsPool = words;
+    std::ranges::shuffle(this->wordsPool, getRng());
+}
+
+std::vector<std::string> Room::drawThreeWordsFromPool() {
+    this->currentWordsChoices.clear();
+
+    if (this->wordsPool.size() < 3 && !this->backupWordsPool.empty()) {
+        this->wordsPool = this->backupWordsPool;
+        std::ranges::shuffle(this->wordsPool, getRng());
+    }
+
+    const size_t count = std::min<size_t>(3, this->wordsPool.size());
+    for (size_t i = 0; i < count; ++i) {
+        this->currentWordsChoices.push_back(std::move(this->wordsPool.back()));
+        wordsPool.pop_back();
+    }
+
+    return currentWordsChoices;
+}
+
+bool Room::selectWordFromChoices(const std::string &chosenWord) {
+    auto it = std::ranges::find(this->currentWordsChoices, chosenWord);
+    if (it == this->currentWordsChoices.end()) {
+        return false;
+    }
+
+    this->guessingWord = chosenWord;
+
+    /* If we want in the future 2 other words back in pool
+    for (const auto& word : currentWordChoices) {
+        if (word != chosenWord) {
+            wordPool.push_back(word);
+        }
+    }
+    std::shuffle(wordPool.begin(), wordPool.end(), getRng());
+    */
+
+    this->currentWordsChoices.clear();
+    return true;
+}
+
+const std::string & Room::getSecretWord() const {
+    return this->guessingWord;
 }

@@ -9,6 +9,7 @@ public:
 
 class RoundStartState : public IRoomState {
 public:
+    void onEnter(Room &room) override;
     void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
