@@ -14,11 +14,16 @@ public:
 
     [[nodiscard]] int getPoints() const;
 
-    [[nodiscard]] crow::websocket::connection *getConnection() const;
+    [[nodiscard]] bool getIsDrawer() const;
+
+    void setDrawer();
+
+    [[nodiscard]] crow::websocket::connection *getConn() const;
 
 private:
     std::string nickname{"No name"};
     int points{0};
+    bool isDrawer{false};
     crow::websocket::connection *conn{nullptr};
 };
 

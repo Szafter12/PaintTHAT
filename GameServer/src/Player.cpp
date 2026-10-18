@@ -16,6 +16,14 @@ int Player::getPoints() const {
     return this->points;
 }
 
-crow::websocket::connection *Player::getConnection() const {
+bool Player::getIsDrawer() const {
+    return this->isDrawer;
+}
+
+void Player::setDrawer() {
+    this->isDrawer = true;
+}
+
+crow::websocket::connection *Player::getConn() const {
     return this->conn;
 }
