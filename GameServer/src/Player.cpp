@@ -20,8 +20,8 @@ bool Player::getIsDrawer() const {
     return this->isDrawer;
 }
 
-void Player::setDrawer() {
-    this->isDrawer = true;
+void Player::setIsDrawer(bool drawer) {
+    this->isDrawer = drawer;
 }
 
 crow::websocket::connection *Player::getConn() const {

@@ -12,6 +12,9 @@ class IRoomState {
 public:
     virtual ~IRoomState() = default;
 
+    virtual void onEnter(Room &room) {
+    }
+
     virtual void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     }
 };
