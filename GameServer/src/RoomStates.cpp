@@ -4,14 +4,11 @@
 #include "Room.hpp"
 
 void LobbyState::onEnter(Room &room) {
+    json packet = Packet::makeLobbyInitiated(room.getMaxRounds(), room.getRoundTime());
+    room.broadcastAll(packet);
 }
 
 void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-    /*
-     * TODO
-     * - LOBBY_UPDATE from client (rounds count, time etc.)
-     */
-
     std::string type = packet.at("type");
 
     if (type == "PLAYER_JOIN") {
@@ -20,6 +17,11 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 
         json packetToSend = Packet::makeLobbyUpdate(room.getPin(), room.getPlayers());
         room.broadcastAll(packetToSend);
+    } else if (type == "LOBBY_UPDATE" && &conn == room.getHostConn()) {
+        /*
+         * TODO
+         * - LOBBY_UPDATE from client (rounds count, time etc.)
+         */
     } else if (type == "START_GAME" && &conn == room.getHostConn()) {
         if (room.getPlayersCount() < 2) {
             conn.send_text(
@@ -70,30 +72,46 @@ void WhileRoundState::onEnter(Room &room) {
 }
 
 void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-    /*
-     * TODO
-     * - Checking drawer conn and is every player guessed then stop round and go to next
-     * - Check guessing words and add players who guessed to
-     */
+    if (!room.getCurrentDrawer()->getConn() || !room.isAllGuessed()) {
+        room.stopCountdown();
+        room.changeState(std::make_unique<RoundEndState>());
+    }
 
-    // if (!room.getCurrentDrawer()->getConn() || ) {
-    //     room.stopCountdown();
-    //     room.changeState(std::make_unique<RoundEndState>());
-    // }
+    std::string type = packet.at("type");
+
+    if (type == "SUBMIT_GUESS" && &conn != room.getCurrentDrawer()->getConn()) {
+        std::string guessWord = packet.at("payload").at("guess");
+        std::string nickname = room.getPlayerByConn(&conn)->getNick();
+
+        switch (Guessing guessing = room.checkGuess(guessWord)) {
+            case Guessing::Guessed: {
+                room.addToGuessQueue(&conn);
+                room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname));
+                break;
+            }
+            case Guessing::Miss: {
+                room.broadcastAll(Packet::makePlayerGuessedMiss(nickname, guessWord));
+                break;
+            }
+            case Guessing::Almost_Guess: {
+                room.sendJson(&conn, Packet::makePlayerGuessedAlmost(nickname, guessWord));
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
 }
 
 void RoundEndState::onEnter(Room &room) {
-
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-
 }
 
 void EndGameState::onEnter(Room &room) {
-
 }
 
 void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-    
 }
