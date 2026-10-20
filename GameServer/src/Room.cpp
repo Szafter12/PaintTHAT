@@ -22,18 +22,12 @@ void Room::changeState(std::unique_ptr<IRoomState> newState) {
 }
 
 void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
+    std::lock_guard<std::mutex> lock(this->roomMutex);
     this->currentState->handlePacket(*this, conn, packet);
 }
 
 void Room::addPlayer(crow::websocket::connection &conn, std::string &playerName) {
     this->players.emplace_back(playerName, conn);
-}
-
-void Room::roundCountdown(int seconds) {
-    for (int i{seconds}; i > 0; i--) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    this->round_ends_holder = true;
 }
 
 void Room::broadcastAll(const json &packet) const {
@@ -67,6 +61,10 @@ void Room::setPlayerArray(json &playersArray) const {
     }
 }
 
+void Room::setGuessingWord(const std::string &word) {
+    this->guessingWord = word;
+}
+
 int Room::getPlayersCount() const {
     return this->players.size();
 }
@@ -92,6 +90,23 @@ void Room::prepareNewRoundQueue() {
     std::ranges::shuffle(this->drawStack, rng);
 
     this->currentRound++;
+}
+
+Guessing Room::checkGuess(std::string &guess) {
+    /*
+     * TODO
+     * Implement Levenshteina checking
+     *
+     */
+    guess = Helper::normalizeForComparison(guess);
+    std::string guessingWord = Helper::normalizeForComparison(this->guessingWord);
+    if (guessingWord == guess) {
+        return Guessing::Guessed;
+    } else if () {
+
+    } else {
+        return Guessing::Miss;
+    }
 }
 
 Player *Room::popNextDrawer() {
@@ -129,6 +144,10 @@ void Room::initWordPool(const std::vector<std::string> &words) {
     this->backupWordsPool = words;
     this->wordsPool = words;
     std::ranges::shuffle(this->wordsPool, getRng());
+}
+
+int Room::getRoundTime() const {
+    return this->roundTime;
 }
 
 std::vector<std::string> Room::drawThreeWordsFromPool() {
@@ -171,4 +190,53 @@ bool Room::selectWordFromChoices(const std::string &chosenWord) {
 
 const std::string & Room::getSecretWord() const {
     return this->guessingWord;
+}
+
+void Room::startCountdown(int seconds) {
+    stopCountdown();
+    this->round_ends_holder = false;
+    this->timerThread = std::jthread(&Room::roundCountdownWorker, this, seconds);
+}
+
+void Room::stopCountdown() {
+    if (this->timerThread.joinable()) {
+        this->timerThread.request_stop();
+        this->timerCv.notify_all();
+
+        if (std::this_thread::get_id() != this->timerThread.get_id()) {
+            this->timerThread.join();
+        }
+    }
+}
+
+void Room::roundCountdownWorker(std::stop_token stoken, int seconds) {
+    for (int i = seconds; i > 0; --i) {
+        {
+            std::unique_lock<std::mutex> timerLock(this->timerMutex);
+            if (this->timerCv.wait_for(timerLock, stoken, std::chrono::seconds(1), [] { return false; })) {
+                return;
+            }
+        }
+
+        if (stoken.stop_requested()) return;
+
+        json packet = {
+            {"type", "TIME_LEFT"},
+            {"payload",
+                {
+                    {"time", i - 1}
+                }
+            }
+        };
+
+        std::lock_guard<std::mutex> roomLock(this->roomMutex);
+        this->broadcastAll(packet);
+    }
+
+    if (stoken.stop_requested()) return;
+
+    this->round_ends_holder = true;
+
+    std::lock_guard<std::mutex> roomLock(this->roomMutex);
+    this->changeState(std::make_unique<RoundEndState>());
 }

@@ -4,6 +4,7 @@
 
 class LobbyState : public IRoomState {
 public:
+    void onEnter(Room &room) override;
     void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
@@ -15,16 +16,19 @@ public:
 
 class WhileRoundState : public IRoomState {
 public:
+    void onEnter(Room &room) override;
     void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
 class RoundEndState : public IRoomState {
 public:
+    void onEnter(Room &room) override;
     void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
 class EndGameState : public IRoomState {
 public:
+    void onEnter(Room &room) override;
     void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) override;
 };
 
