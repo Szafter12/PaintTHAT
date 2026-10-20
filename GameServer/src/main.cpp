@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include "crow.h"
 #include <nlohmann/json.hpp>
+#include "PacketBuilder.hpp"
 #include "../include/Room.hpp"
 
 using json = nlohmann::json;
@@ -33,8 +34,7 @@ int main() {
                         auto [it, inserted] = rooms.try_emplace(PIN, std::make_unique<Room>(conn, PIN));
 
                         if (!inserted) {
-                            conn.send_text(
-                                R"({"type": "ERROR", "payload": {"code": "ROOM_EXISTS", "message": "Pokoj o tym PIN-ie juz istnieje!"}})");
+                            conn.send_text(Packet::makeError("ROOM_EXISTS", "Pokoj o tym PIN-ie juz istnieje").dump());
                             return;
                         }
 
@@ -42,8 +42,7 @@ int main() {
                     } else {
                         const auto it = rooms.find(PIN);
                         if (it == rooms.end()) {
-                            conn.send_text(
-                                R"({"type": "ERROR", "payload": {"code": "ROOM_NOT_FOUND", "message": "Nie znaleziono pokoju!"}})");
+                            conn.send_text(Packet::makeError("ROOM_NOT_FOUND", "Nie znaleziono pokoju").dump());
                             return;
                         }
 
@@ -51,8 +50,7 @@ int main() {
                     }
                 } catch (const json::exception &e) {
                     std::cerr << "JSON ERROR: " << e.what() << std::endl;
-                    conn.send_text(
-                        R"({"type": "ERROR", "payload": {"code": "BAD_JSON", "message": "Niepoprawny format danych!"}})");
+                    conn.send_text(Packet::makeError("BAD_JSON", "Niepoprawny format danych").dump());
                 }
             });
 

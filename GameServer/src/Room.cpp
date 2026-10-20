@@ -1,5 +1,4 @@
 #include "../include/Room.hpp"
-#include "../include/RoomStates.hpp"
 
 namespace {
     std::mt19937 &getRng() {
@@ -52,13 +51,8 @@ Player *Room::getCurrentDrawer() {
     return nullptr;
 }
 
-void Room::setPlayerArray(json &playersArray) const {
-    for (const auto &player: this->players) {
-        playersArray.push_back({
-            {"nickname", player.getNick()},
-            {"points", player.getPoints()}
-        });
-    }
+std::vector<Player> Room::getPlayers() const {
+    return this->players;
 }
 
 void Room::setGuessingWord(const std::string &word) {
@@ -96,22 +90,17 @@ void Room::prepareNewRoundQueue() {
     this->currentRound++;
 }
 
-Guessing Room::checkGuess(std::string &guess) {
-    /*
-     * TODO
-     * Implement Levenshteina checking
-     *
-     */
-
+Guessing Room::checkGuess(std::string &guess) const {
     guess = Helper::normalizeForComparison(guess);
-    std::string guessingWord = Helper::normalizeForComparison(this->guessingWord);
-    return Guessing::Guessed;
-    // if (guessingWord == guess) {
-    //     return Guessing::Guessed;
-    // } else if () {
-    // } else {
-    //     return Guessing::Miss;
-    // }
+    const std::string correctWord = Helper::normalizeForComparison(this->guessingWord);
+
+    if (correctWord == guess) {
+        return Guessing::Guessed;
+    } else if (Helper::levenshtein_distance(guess, correctWord) <= 1) {
+        return Guessing::Almost_Guess;
+    } else {
+        return Guessing::Miss;
+    }
 }
 
 Player *Room::popNextDrawer() {
@@ -236,15 +225,7 @@ void Room::roundCountdownWorker(const std::stop_token &stoken, int seconds) {
 
         if (stoken.stop_requested()) return;
 
-        json packet = {
-            {"type", "TIME_LEFT"},
-            {
-                "payload",
-                {
-                    {"time", i - 1}
-                }
-            }
-        };
+        json packet = Packet::makeTimeLeft(i - 1);
 
         std::lock_guard<std::mutex> roomLock(this->roomMutex);
         this->broadcastAll(packet);

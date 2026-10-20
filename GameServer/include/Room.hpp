@@ -6,6 +6,8 @@
 #include <random>
 #include "IRoomState.hpp"
 #include "Player.hpp"
+#include "PacketBuilder.hpp"
+#include "RoomStates.hpp"
 #include "Helper.hpp"
 
 #define MOCK_WORDS "pies", "kot", "ryba", "ptak", "drzewo", "kwiat", "słońce", "księżyc", "chmura", "dom", "okno", "drzwi", "krzesło", "stół", "łóżko", "lampa", "książka", "auto", "rower", "statek", "samolot", "pociąg", "jabłko", "banan", "pizza", "ser", "chleb", "woda", "kawa", "herbata", "buty", "spodnie", "czapka", "zegarek", "klucz", "telefon", "komputer", "myszka", "gitara", "bęben", "szkoła", "zamek", "plaża", "góry", "las", "ogień", "woda", "ziemia", "wiatr", "król", "królowa", "rycerz", "smok", "pirat", "duch", "wampir", "robot", "kosmonauta", "obcy", "ninja", "kucharz", "lekarz", "policjant", "strażak", "fryzjer", "malarz", "piłka", "bramka", "rower", "narty", "basen", "złoto", "srebro", "diament", "pieniądze", "portfel", "torba", "plecak", "walizka", "szczoteczka", "mydło", "lustro", "ręcznik", "grzebień", "nożyczki", "ołówek", "długopis", "gumka", "zeszyt", "linijka", "pudełko", "prezent", "balon", "tort", "świeczka", "flaga", "mapa", "kompas", "lornetka"
@@ -45,7 +47,7 @@ public:
     void broadcastExcept(const crow::websocket::connection *conn, const json &packet) const;
 
     // Words selection
-    Guessing checkGuess(std::string &guess);
+    Guessing checkGuess(std::string &guess) const;
 
     [[nodiscard]] std::vector<std::string> drawThreeWordsFromPool();
 
@@ -53,15 +55,15 @@ public:
 
     void prepareNewRoundQueue();
 
-
     // Setters
     void setGuessingWord(const std::string &word);
 
     void initWordPool(const std::vector<std::string> &words);
 
-    void setPlayerArray(json &playersArray) const;
 
     // Getters
+    std::vector<Player> getPlayers() const;
+
     Player *getCurrentDrawer();
 
     [[nodiscard]] bool isEndGame() const;
