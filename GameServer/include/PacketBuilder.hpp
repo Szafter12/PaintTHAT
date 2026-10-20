@@ -114,13 +114,12 @@ namespace Packet {
             {"type", "PLAYER_GUESSED_ALMOST"},
             {
                 "payload", {
-                        {"nickname", name},
-                        {"guessWord", guessWord}
+                    {"nickname", name},
+                    {"guessWord", guessWord}
                 }
             }
         };
     }
-
 }
 
 #endif //GAMESERVER_PACKETBUILDER_HPP
