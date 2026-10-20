@@ -105,13 +105,13 @@ Guessing Room::checkGuess(std::string &guess) {
 
     guess = Helper::normalizeForComparison(guess);
     std::string guessingWord = Helper::normalizeForComparison(this->guessingWord);
-
-    if (guessingWord == guess) {
-        return Guessing::Guessed;
-    } else if () {
-    } else {
-        return Guessing::Miss;
-    }
+    return Guessing::Guessed;
+    // if (guessingWord == guess) {
+    //     return Guessing::Guessed;
+    // } else if () {
+    // } else {
+    //     return Guessing::Miss;
+    // }
 }
 
 Player *Room::popNextDrawer() {
@@ -201,10 +201,17 @@ const std::string &Room::getSecretWord() const {
     return this->guessingWord;
 }
 
+crow::websocket::connection *Room::getHostConn() const {
+    return this->hostConn;
+}
+
 void Room::startCountdown(int seconds) {
     stopCountdown();
     this->round_ends_holder = false;
-    this->timerThread = std::jthread(&Room::roundCountdownWorker, this, seconds);
+
+    this->timerThread = std::jthread([this, seconds](const std::stop_token &stoken) {
+        this->roundCountdownWorker(stoken, seconds);
+    });
 }
 
 void Room::stopCountdown() {

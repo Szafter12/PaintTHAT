@@ -2,6 +2,9 @@
 
 #include "Room.hpp"
 
+void LobbyState::onEnter(Room &room) {
+}
+
 void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     /*
      * TODO
@@ -29,7 +32,12 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
             };
 
             room.broadcastAll(packetToSend);
-        } else if (type == "START_GAME") {
+        } else if (type == "START_GAME" && &conn == room.getHostConn()) {
+            if (room.getPlayersCount() < 2) {
+                conn.send_text(
+                    R"({"type": "ERROR", "payload": {"code": "NOT_ENOUGH_PLAYERS", "message": "Potrzeba minimum 2 graczy, aby rozpoczac gre!"}})");
+                return;
+            }
             room.prepareNewRoundQueue();
             room.changeState(std::make_unique<RoundStartState>());
         }
@@ -95,9 +103,24 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
      * - Check guessing words and add players who guessed to
      */
 
-    if (!room.getCurrentDrawer()->getConn() || ) {
-        room.stopCountdown();
-        room.changeState(std::make_unique<RoundEndState>());
-    }
+    // if (!room.getCurrentDrawer()->getConn() || ) {
+    //     room.stopCountdown();
+    //     room.changeState(std::make_unique<RoundEndState>());
+    // }
 }
 
+void RoundEndState::onEnter(Room &room) {
+    IRoomState::onEnter(room);
+}
+
+void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+    IRoomState::handlePacket(room, conn, packet);
+}
+
+void EndGameState::onEnter(Room &room) {
+    IRoomState::onEnter(room);
+}
+
+void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+    IRoomState::handlePacket(room, conn, packet);
+}
