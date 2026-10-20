@@ -1,42 +1,34 @@
 #include "../include/RoomStates.hpp"
 
+#include "PacketBuilder.hpp"
 #include "Room.hpp"
+
+void LobbyState::onEnter(Room &room) {
+}
 
 void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     /*
      * TODO
      * - LOBBY_UPDATE from client (rounds count, time etc.)
      */
-    try {
-        std::string type = packet.at("type");
 
-        if (type == "PLAYER_JOIN") {
-            std::string playerName = packet.at("payload").at("nickname");
-            room.addPlayer(conn, playerName);
+    std::string type = packet.at("type");
 
-            json playersArray = json::array();
+    if (type == "PLAYER_JOIN") {
+        std::string playerName = packet.at("payload").at("nickname");
+        room.addPlayer(conn, playerName);
 
-            room.setPlayerArray(playersArray);
-
-            json packetToSend = {
-                {"type", "LOBBY_UPDATE"},
-                {
-                    "payload", {
-                        {"pin", room.getPin()},
-                        {"players", playersArray}
-                    }
-                }
-            };
-
-            room.broadcastAll(packetToSend);
-        } else if (type == "START_GAME") {
-            room.prepareNewRoundQueue();
-            room.changeState(std::make_unique<RoundStartState>());
+        json packetToSend = Packet::makeLobbyUpdate(room.getPin(), room.getPlayers());
+        room.broadcastAll(packetToSend);
+    } else if (type == "START_GAME" && &conn == room.getHostConn()) {
+        if (room.getPlayersCount() < 2) {
+            conn.send_text(
+                Packet::makeError("NOT_ENOUGH_PLAYERS", "Potrzeba minimum 2 graczy, aby rozpoczac gre").dump());
+            return;
         }
-    } catch (const json::exception &e) {
-        std::cerr << "JSON ERROR: " << e.what() << std::endl;
-        conn.send_text(
-            R"({"type": "ERROR", "payload": {"code": "BAD_JSON", "message": "Niepoprawny format danych!"}})");
+
+        room.prepareNewRoundQueue();
+        room.changeState(std::make_unique<RoundStartState>());
     }
 }
 
@@ -45,29 +37,18 @@ void RoundStartState::onEnter(Room &room) {
 
     const Player *drawer = room.popNextDrawer();
     if (!drawer) {
+        /* TODO
+         * - Implement change state to EndRound
+        */
         return;
     }
 
     std::vector<std::string> threeWords = room.drawThreeWordsFromPool();
 
-    json packetToDrawer = {
-        {"type", "CHOOSE_WORD"},
-        {
-            "payload", {
-                {"words", threeWords}
-            }
-        }
-    };
+    json packetToDrawer = Packet::makeChooseWord(threeWords);
     room.sendJson(drawer->getConn(), packetToDrawer);
 
-    json packetToOthers = {
-        {"type", "WAITING_FOR_WORD"},
-        {
-            "payload", {
-                {"drawer", drawer->getNick()}
-            }
-        }
-    };
+    json packetToOthers = Packet::makeWaitingForWord(room.getCurrentDrawer()->getNick());
     room.broadcastExcept(drawer->getConn(), packetToOthers);
 }
 
@@ -95,9 +76,24 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
      * - Check guessing words and add players who guessed to
      */
 
-    if (!room.getCurrentDrawer()->getConn() || ) {
-        room.stopCountdown();
-        room.changeState(std::make_unique<RoundEndState>());
-    }
+    // if (!room.getCurrentDrawer()->getConn() || ) {
+    //     room.stopCountdown();
+    //     room.changeState(std::make_unique<RoundEndState>());
+    // }
 }
 
+void RoundEndState::onEnter(Room &room) {
+
+}
+
+void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+
+}
+
+void EndGameState::onEnter(Room &room) {
+
+}
+
+void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+    
+}

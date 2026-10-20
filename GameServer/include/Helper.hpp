@@ -4,14 +4,13 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <array>
 
 class Helper {
 public:
-    /*
-     * TODO
-     * - Algorytm Levenshteina
-     */
     static std::string normalizeForComparison(std::string s);
+
+    static int levenshtein_distance(const std::string &s1, const std::string &s2);
 };
 
 
