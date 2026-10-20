@@ -30,6 +30,7 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 
             room.broadcastAll(packetToSend);
         } else if (type == "START_GAME") {
+            room.prepareNewRoundQueue();
             room.changeState(std::make_unique<RoundStartState>());
         }
     } catch (const json::exception &e) {
@@ -40,7 +41,9 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 }
 
 void RoundStartState::onEnter(Room &room) {
-    Player *drawer = room.popNextDrawer();
+    if (room.is_drawStackEmpty()) room.prepareNewRoundQueue();
+
+    const Player *drawer = room.popNextDrawer();
     if (!drawer) {
         return;
     }
@@ -72,7 +75,7 @@ void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn
     std::string type = packet.at("type");
 
     if (type == "PICKED_WORD") {
-        std::string guessWord = packet.at("payload").at("guessWord");
+        const std::string guessWord = packet.at("payload").at("guessWord");
 
         if (!guessWord.empty()) {
             room.setGuessingWord(guessWord);
@@ -82,11 +85,15 @@ void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn
 }
 
 void WhileRoundState::onEnter(Room &room) {
+    room.startCountdown(room.getRoundTime());
+}
+
+void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     /*
      * TODO
      * - Checking drawer conn and is every player guessed then stop round and go to next
+     * - Check guessing words and add players who guessed to
      */
-    room.startCountdown(room.getRoundTime());
 
     if (!room.getCurrentDrawer()->getConn() || ) {
         room.stopCountdown();

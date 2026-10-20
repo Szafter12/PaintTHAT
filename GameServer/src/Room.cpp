@@ -73,6 +73,10 @@ bool Room::is_round_ends() {
     return this->round_ends_holder;
 }
 
+bool Room::is_drawStackEmpty() const {
+    return this->drawStack.empty();
+}
+
 std::string Room::getPin() const {
     return this->pin;
 }
@@ -98,12 +102,13 @@ Guessing Room::checkGuess(std::string &guess) {
      * Implement Levenshteina checking
      *
      */
+
     guess = Helper::normalizeForComparison(guess);
     std::string guessingWord = Helper::normalizeForComparison(this->guessingWord);
+
     if (guessingWord == guess) {
         return Guessing::Guessed;
     } else if () {
-
     } else {
         return Guessing::Miss;
     }
@@ -144,6 +149,10 @@ void Room::initWordPool(const std::vector<std::string> &words) {
     this->backupWordsPool = words;
     this->wordsPool = words;
     std::ranges::shuffle(this->wordsPool, getRng());
+}
+
+bool Room::isEndGame() const {
+    return this->currentRound > this->maxRounds;
 }
 
 int Room::getRoundTime() const {
@@ -188,7 +197,7 @@ bool Room::selectWordFromChoices(const std::string &chosenWord) {
     return true;
 }
 
-const std::string & Room::getSecretWord() const {
+const std::string &Room::getSecretWord() const {
     return this->guessingWord;
 }
 
@@ -209,7 +218,7 @@ void Room::stopCountdown() {
     }
 }
 
-void Room::roundCountdownWorker(std::stop_token stoken, int seconds) {
+void Room::roundCountdownWorker(const std::stop_token &stoken, int seconds) {
     for (int i = seconds; i > 0; --i) {
         {
             std::unique_lock<std::mutex> timerLock(this->timerMutex);
@@ -222,7 +231,8 @@ void Room::roundCountdownWorker(std::stop_token stoken, int seconds) {
 
         json packet = {
             {"type", "TIME_LEFT"},
-            {"payload",
+            {
+                "payload",
                 {
                     {"time", i - 1}
                 }
