@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <atomic>
+#include <queue>
 #include <random>
 #include "IRoomState.hpp"
 #include "Player.hpp"
@@ -34,7 +35,9 @@ public:
 
     Player *popNextDrawer();
 
-    // Counter
+    void addPointsToPlayers();
+
+    // Timer
     void startCountdown(int seconds);
 
     void stopCountdown();
@@ -58,13 +61,16 @@ public:
     // Setters
     void setGuessingWord(const std::string &word);
 
-    void initWordPool(const std::vector<std::string> &words);
+    void addToGuessQueue(const crow::websocket::connection *conn);
 
+    void initWordPool(const std::vector<std::string> &words);
 
     // Getters
     std::vector<Player> getPlayers() const;
 
     Player *getCurrentDrawer();
+
+    Player *getPlayerByConn(const crow::websocket::connection *conn);
 
     [[nodiscard]] bool isEndGame() const;
 
@@ -74,9 +80,13 @@ public:
 
     [[nodiscard]] bool is_drawStackEmpty() const;
 
+    [[nodiscard]] bool isAllGuessed() const;
+
     [[nodiscard]] std::string getPin() const;
 
     [[nodiscard]] int getRoundTime() const;
+
+    [[nodiscard]] int getMaxRounds() const;
 
     [[nodiscard]] const std::string &getSecretWord() const;
 
@@ -91,6 +101,7 @@ private:
     // Players
     std::vector<Player> players;
     std::vector<size_t> drawStack;
+    std::vector<size_t> guessedQueue;
 
     // Words
     std::vector<std::string> wordsPool{MOCK_WORDS};

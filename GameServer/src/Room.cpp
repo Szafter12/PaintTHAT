@@ -8,8 +8,8 @@ namespace {
 }
 
 Room::Room(crow::websocket::connection &conn, const std::string &pin)
-    : hostConn(&conn), pin(pin), roundTime(60), maxRounds(4) {
-    this->currentState = std::make_unique<LobbyState>();
+    : hostConn(&conn), pin(pin), roundTime(600), maxRounds(4) {
+    this->changeState(std::make_unique<LobbyState>());
 }
 
 void Room::changeState(std::unique_ptr<IRoomState> newState) {
@@ -51,6 +51,16 @@ Player *Room::getCurrentDrawer() {
     return nullptr;
 }
 
+Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
+    if (!conn) return nullptr;
+
+    for (auto &player: this->players) {
+        if (player.getConn() == conn) return &player;
+    }
+
+    return nullptr;
+}
+
 std::vector<Player> Room::getPlayers() const {
     return this->players;
 }
@@ -59,8 +69,24 @@ void Room::setGuessingWord(const std::string &word) {
     this->guessingWord = word;
 }
 
+void Room::addToGuessQueue(const crow::websocket::connection *conn) {
+    for (size_t i{0}; i < this->players.size(); ++i) {
+        if (this->players[i].getConn() != nullptr && this->players[i].getConn() == conn) {
+            this->guessedQueue.push_back(i);
+            this->players[i].setIsGuessed(true);
+        }
+    }
+}
+
 int Room::getPlayersCount() const {
-    return this->players.size();
+    int count{0};
+    for (auto &player: this->players) {
+        if (player.getConn() != nullptr) {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 bool Room::is_round_ends() {
@@ -69,6 +95,15 @@ bool Room::is_round_ends() {
 
 bool Room::is_drawStackEmpty() const {
     return this->drawStack.empty();
+}
+
+bool Room::isAllGuessed() const {
+    for (const auto &player: this->players) {
+        if (!player.getConn()) continue;
+        if (!player.getIsGuessed()) return false;
+    }
+
+    return true;
 }
 
 std::string Room::getPin() const {
@@ -121,6 +156,17 @@ Player *Room::popNextDrawer() {
     return nullptr;
 }
 
+void Room::addPointsToPlayers() {
+    /*
+     * TODO
+     * - Implement point system similar to this from Scribble.io
+     * -- If player guess before half time max point
+     * -- After half time some point less
+     * -- After one player guess every next get less points
+     * - For drawing player its scale with people who guess amount
+     */
+}
+
 void Room::sendJson(crow::websocket::connection *conn, const nlohmann::json &packet) {
     if (conn != nullptr) {
         conn->send_text(packet.dump());
@@ -146,6 +192,10 @@ bool Room::isEndGame() const {
 
 int Room::getRoundTime() const {
     return this->roundTime;
+}
+
+int Room::getMaxRounds() const {
+    return this->maxRounds;
 }
 
 std::vector<std::string> Room::drawThreeWordsFromPool() {

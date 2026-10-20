@@ -73,6 +73,54 @@ namespace Packet {
             }
         };
     }
+
+    inline json makeLobbyInitiated(int maxRounds, int roundTime) {
+        return {
+            {"type", "LOBBY_INITIATED"},
+            {
+                "payload", {
+                    {"maxRounds", maxRounds},
+                    {"roundTime", roundTime}
+                }
+            }
+        };
+    }
+
+    inline json makePlayerGuessedCorrectly(std::string &name) {
+        return {
+            {"type", "PLAYER_GUESSED_CORRECTLY"},
+            {
+                "payload", {
+                    {"nickname", name}
+                }
+            }
+        };
+    }
+
+    inline json makePlayerGuessedMiss(std::string &name, std::string &guessWord) {
+        return {
+            {"type", "PLAYER_GUESSED_MISS"},
+            {
+                "payload", {
+                    {"nickname", name},
+                    {"guessWord", guessWord}
+                }
+            }
+        };
+    }
+
+    inline json makePlayerGuessedAlmost(std::string &name, std::string &guessWord) {
+        return {
+            {"type", "PLAYER_GUESSED_ALMOST"},
+            {
+                "payload", {
+                        {"nickname", name},
+                        {"guessWord", guessWord}
+                }
+            }
+        };
+    }
+
 }
 
 #endif //GAMESERVER_PACKETBUILDER_HPP
