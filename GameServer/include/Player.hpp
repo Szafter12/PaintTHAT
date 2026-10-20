@@ -13,13 +13,18 @@ public:
 
     // Getters
     [[nodiscard]] std::string getNick() const;
+
     [[nodiscard]] int getPoints() const;
+
     [[nodiscard]] bool getIsDrawer() const;
+
     [[nodiscard]] bool getIsGuessed() const;
+
     [[nodiscard]] crow::websocket::connection *getConn() const;
 
     // Setters
     void setIsDrawer(bool drawer);
+
     void setIsGuessed(bool guessed);
 
 private:
