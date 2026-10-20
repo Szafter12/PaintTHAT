@@ -29,7 +29,9 @@ file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS
 
 find_package(Threads REQUIRED)
 
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCES}
+        src/Helper.cpp
+        include/Helper.hpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE "include")
 

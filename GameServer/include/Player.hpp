@@ -8,22 +8,30 @@ class Player {
 public:
     Player(const std::string &nick, crow::websocket::connection &conn);
 
+    // Modifiers
     void addPoints(int amount);
 
+    // Getters
     [[nodiscard]] std::string getNick() const;
 
     [[nodiscard]] int getPoints() const;
 
     [[nodiscard]] bool getIsDrawer() const;
 
-    void setIsDrawer(bool drawer);
+    [[nodiscard]] bool getIsGuessed() const;
 
     [[nodiscard]] crow::websocket::connection *getConn() const;
+
+    // Setters
+    void setIsDrawer(bool drawer);
+
+    void setIsGuessed(bool guessed);
 
 private:
     std::string nickname{"No name"};
     int points{0};
     bool isDrawer{false};
+    bool isGuessed{false};
     crow::websocket::connection *conn{nullptr};
 };
 
