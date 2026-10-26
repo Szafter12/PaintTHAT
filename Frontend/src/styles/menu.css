@@ -1,0 +1,95 @@
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Bradley Hand', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;   
+  align-items: center;       
+  min-height: 100vh;        
+}
+
+.hidden{
+  display: none !important;
+}
+
+.menu {
+  text-align: center;
+  background-color: #000000;
+}
+
+.logo {
+  width: 100%;       
+  max-width: 360px;  
+  margin: 20px auto;    
+  display: block;
+}
+
+.start-button {
+  
+  background-image: url('../images/START0.gif'); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.start-button:hover {
+   background-image: url('../images/START1.gif');
+}
+
+.return-button {
+  background-image: url('../images/RETURN0.gif'); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.return-button:hover {
+   background-image: url('../images/RETURN1.gif');
+}
+
+.host-button {
+  background-image: url('../images/HOST0.gif'); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.host-button:hover {
+   background-image: url('../images/HOST1.gif');
+}
+
+.player-button {
+  background-image: url('../images/PLAYER0.gif'); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.player-button:hover {
+   background-image: url('../images/PLAYER1.gif');
+}
