@@ -31,7 +31,7 @@ public:
     void onPacket(crow::websocket::connection &conn, const json &packet);
 
     // Handling players
-    void addPlayer(crow::websocket::connection &conn, std::string &playerName);
+    void addPlayer(crow::websocket::connection &conn, std::string_view playerName);
 
     Player *popNextDrawer();
 
@@ -50,9 +50,9 @@ public:
     void broadcastExcept(const crow::websocket::connection *conn, const json &packet) const;
 
     // Words selection
-    Guessing checkGuess(std::string &guess) const;
+    Guessing checkGuess(std::string_view guess) const;
 
-    [[nodiscard]] std::vector<std::string> drawThreeWordsFromPool();
+    [[nodiscard]] const std::vector<std::string> &drawThreeWordsFromPool();
 
     [[nodiscard]] bool selectWordFromChoices(const std::string &chosenWord);
 
@@ -82,7 +82,7 @@ public:
 
     [[nodiscard]] bool isAllGuessed() const;
 
-    [[nodiscard]] std::string getPin() const;
+    [[nodiscard]] const std::string &getPin() const;
 
     [[nodiscard]] int getRoundTime() const;
 

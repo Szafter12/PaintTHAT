@@ -87,7 +87,7 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
         std::string guessWord = packet.at("payload").at("guess");
         std::string nickname = room.getPlayerByConn(&conn)->getNick();
 
-        switch (Guessing guessing = room.checkGuess(guessWord)) {
+        switch (room.checkGuess(guessWord)) {
             case Guessing::Guessed: {
                 room.addToGuessQueue(&conn);
                 room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname));
@@ -112,6 +112,16 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
+    }
+}
+
+void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn) {
+    Player *drawer = room.getCurrentDrawer();
+
+    if (drawer && drawer->getConn() == &conn) {
+        room.stopCountdown();
+        room.broadcastAll(Packet::makeDrawerQuitGame(drawer->getNick()));
+        room.changeState(std::make_unique<RoundEndState>());
     }
 }
 

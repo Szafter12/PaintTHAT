@@ -1,6 +1,8 @@
 #include "../include/Helper.hpp"
 
-std::string Helper::normalizeForComparison(std::string s) {
+std::string Helper::normalizeForComparison(std::string_view sv) {
+    std::string s(sv);
+
     std::ranges::transform(s, s.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
     });
@@ -11,7 +13,7 @@ std::string Helper::normalizeForComparison(std::string s) {
         {"Ś", "s"}, {"ś", "s"}, {"Ź", "z"}, {"ź", "z"}, {"Ż", "z"}, {"ż", "z"}
     };
 
-    for (const auto& [pl, ascii] : diacriticsMap) {
+    for (const auto &[pl, ascii]: diacriticsMap) {
         size_t pos = 0;
         while ((pos = s.find(pl, pos)) != std::string::npos) {
             s.replace(pos, pl.length(), ascii);
@@ -22,7 +24,7 @@ std::string Helper::normalizeForComparison(std::string s) {
     return s;
 }
 
-int Helper::levenshtein_distance(const std::string &s1, const std::string &s2) {
+int Helper::levenshtein_distance(std::string_view s1, std::string_view s2) {
     int n = s1.length();
     int m = s2.length();
 
