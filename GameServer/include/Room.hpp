@@ -66,7 +66,7 @@ public:
     void initWordPool(const std::vector<std::string> &words);
 
     // Getters
-    std::vector<Player> getPlayers() const;
+    const std::vector<Player> &getPlayers() const;
 
     Player *getCurrentDrawer();
 

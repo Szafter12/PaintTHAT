@@ -61,7 +61,7 @@ Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
     return nullptr;
 }
 
-std::vector<Player> Room::getPlayers() const {
+const std::vector<Player> &Room::getPlayers() const {
     return this->players;
 }
 
