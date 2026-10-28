@@ -8,9 +8,9 @@
 
 class Helper {
 public:
-    static std::string normalizeForComparison(std::string s);
+    static std::string normalizeForComparison(std::string_view sv);
 
-    static int levenshtein_distance(const std::string &s1, const std::string &s2);
+    static int levenshtein_distance(std::string_view s1, std::string_view s2);
 };
 
 

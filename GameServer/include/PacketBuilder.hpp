@@ -9,7 +9,7 @@
 using json = nlohmann::json;
 
 namespace Packet {
-    inline json makeError(const std::string &code, const std::string &message) {
+    inline json makeError(std::string_view code, std::string_view message) {
         return {
             {"type", "ERROR"},
             {
@@ -21,7 +21,7 @@ namespace Packet {
         };
     }
 
-    inline json makeLobbyUpdate(const std::string &pin, const std::vector<Player> &players) {
+    inline json makeLobbyUpdate(std::string_view pin, const std::vector<Player> &players) {
         json playersArray = json::array();
         for (const auto &p: players) {
             playersArray.push_back({
@@ -52,7 +52,7 @@ namespace Packet {
         };
     }
 
-    inline json makeWaitingForWord(const std::string &drawerNick) {
+    inline json makeWaitingForWord(std::string_view drawerNick) {
         return {
             {"type", "WAITING_FOR_WORD"},
             {
@@ -86,7 +86,7 @@ namespace Packet {
         };
     }
 
-    inline json makePlayerGuessedCorrectly(std::string &name) {
+    inline json makePlayerGuessedCorrectly(std::string_view name) {
         return {
             {"type", "PLAYER_GUESSED_CORRECTLY"},
             {
@@ -97,7 +97,7 @@ namespace Packet {
         };
     }
 
-    inline json makePlayerGuessedMiss(std::string &name, std::string &guessWord) {
+    inline json makePlayerGuessedMiss(std::string_view name, std::string_view guessWord) {
         return {
             {"type", "PLAYER_GUESSED_MISS"},
             {
@@ -109,13 +109,24 @@ namespace Packet {
         };
     }
 
-    inline json makePlayerGuessedAlmost(std::string &name, std::string &guessWord) {
+    inline json makePlayerGuessedAlmost(std::string_view name, std::string_view guessWord) {
         return {
             {"type", "PLAYER_GUESSED_ALMOST"},
             {
                 "payload", {
                     {"nickname", name},
                     {"guessWord", guessWord}
+                }
+            }
+        };
+    }
+
+    inline json makeDrawerQuitGame(std::string_view drawerNick) {
+        return {
+            {"type", "DRAWER_QUIT"},
+            {
+                "payload", {
+                    {"nickname", drawerNick}
                 }
             }
         };

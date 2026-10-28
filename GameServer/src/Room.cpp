@@ -25,8 +25,8 @@ void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
     this->currentState->handlePacket(*this, conn, packet);
 }
 
-void Room::addPlayer(crow::websocket::connection &conn, std::string &playerName) {
-    this->players.emplace_back(playerName, conn);
+void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
+    this->players.emplace_back(std::string(playerName), conn);
 }
 
 void Room::broadcastAll(const json &packet) const {
@@ -61,7 +61,7 @@ Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
     return nullptr;
 }
 
-std::vector<Player> Room::getPlayers() const {
+const std::vector<Player> &Room::getPlayers() const {
     return this->players;
 }
 
@@ -106,7 +106,7 @@ bool Room::isAllGuessed() const {
     return true;
 }
 
-std::string Room::getPin() const {
+const std::string &Room::getPin() const {
     return this->pin;
 }
 
@@ -125,13 +125,13 @@ void Room::prepareNewRoundQueue() {
     this->currentRound++;
 }
 
-Guessing Room::checkGuess(std::string &guess) const {
-    guess = Helper::normalizeForComparison(guess);
+Guessing Room::checkGuess(std::string_view guess) const {
+    const std::string normalizedGuess = Helper::normalizeForComparison(guess);
     const std::string correctWord = Helper::normalizeForComparison(this->guessingWord);
 
-    if (correctWord == guess) {
+    if (correctWord == normalizedGuess) {
         return Guessing::Guessed;
-    } else if (Helper::levenshtein_distance(guess, correctWord) <= 1) {
+    } else if (Helper::levenshtein_distance(normalizedGuess, correctWord) <= 1) {
         return Guessing::Almost_Guess;
     } else {
         return Guessing::Miss;
@@ -198,7 +198,7 @@ int Room::getMaxRounds() const {
     return this->maxRounds;
 }
 
-std::vector<std::string> Room::drawThreeWordsFromPool() {
+const std::vector<std::string> &Room::drawThreeWordsFromPool() {
     this->currentWordsChoices.clear();
 
     if (this->wordsPool.size() < 3 && !this->backupWordsPool.empty()) {
@@ -212,7 +212,7 @@ std::vector<std::string> Room::drawThreeWordsFromPool() {
         wordsPool.pop_back();
     }
 
-    return currentWordsChoices;
+    return this->currentWordsChoices;
 }
 
 bool Room::selectWordFromChoices(const std::string &chosenWord) {

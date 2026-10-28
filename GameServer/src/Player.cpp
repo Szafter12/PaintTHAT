@@ -8,7 +8,7 @@ void Player::addPoints(const int amount) {
     this->points += amount;
 }
 
-std::string Player::getNick() const {
+const std::string &Player::getNick() const {
     return this->nickname;
 }
 

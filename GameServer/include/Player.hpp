@@ -12,7 +12,7 @@ public:
     void addPoints(int amount);
 
     // Getters
-    [[nodiscard]] std::string getNick() const;
+    [[nodiscard]] const std::string &getNick() const;
 
     [[nodiscard]] int getPoints() const;
 
