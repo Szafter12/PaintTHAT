@@ -99,7 +99,7 @@ bool Room::is_drawStackEmpty() const {
 
 bool Room::isAllGuessed() const {
     for (const auto &player: this->players) {
-        if (!player.getConn()) continue;
+        if (!player.getConn() || player.getIsDrawer()) continue;
         if (!player.getIsGuessed()) return false;
     }
 

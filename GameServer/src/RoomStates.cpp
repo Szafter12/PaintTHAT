@@ -57,9 +57,13 @@ void RoundStartState::onEnter(Room &room) {
 void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    if (type == "PICKED_WORD") {
+    if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
 
+        /*
+         *TODO
+         * - Add security check is word is from 3 words pool
+         */
         if (!guessWord.empty()) {
             room.setGuessingWord(guessWord);
             room.changeState(std::make_unique<WhileRoundState>());
@@ -72,12 +76,12 @@ void WhileRoundState::onEnter(Room &room) {
 }
 
 void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-    if (!room.getCurrentDrawer()->getConn() || !room.isAllGuessed()) {
-        room.stopCountdown();
-        room.changeState(std::make_unique<RoundEndState>());
-    }
-
     std::string type = packet.at("type");
+
+    /*
+     * TODO
+     * - Implement new virutal method in IRoomState handleDisconnect and check it in main onclose
+     */
 
     if (type == "SUBMIT_GUESS" && &conn != room.getCurrentDrawer()->getConn()) {
         std::string guessWord = packet.at("payload").at("guess");
@@ -87,6 +91,13 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             case Guessing::Guessed: {
                 room.addToGuessQueue(&conn);
                 room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname));
+
+                if (room.isAllGuessed()) {
+                    room.stopCountdown();
+                    room.changeState(std::make_unique<RoundEndState>());
+                    std::cout << "All guessed\n";
+                }
+
                 break;
             }
             case Guessing::Miss: {
