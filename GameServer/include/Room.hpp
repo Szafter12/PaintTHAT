@@ -29,6 +29,7 @@ public:
     void changeState(std::unique_ptr<IRoomState> newState);
 
     void onPacket(crow::websocket::connection &conn, const json &packet);
+    void onClose(crow::websocket::connection &conn);
 
     // Handling players
     void addPlayer(crow::websocket::connection &conn, std::string_view playerName);

@@ -131,6 +131,22 @@ namespace Packet {
             }
         };
     }
+
+    inline json makeDrawerSendStrokeToHost(int x, int y, int prevX, int prevY, std::string_view color, int size, bool isEraser) {
+        return {
+            {"type", "DRAW_BROADCAST"},
+            {"payload", {
+                {"x", x},
+                {"y", y},
+                {"prevX", prevX},
+                {"prevY", prevY},
+                {"color", color},
+                {"size", size},
+                {"isEraser", isEraser}
+              }
+            }
+        };
+    }
 }
 
 #endif //GAMESERVER_PACKETBUILDER_HPP

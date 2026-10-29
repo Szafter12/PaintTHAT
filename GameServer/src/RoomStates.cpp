@@ -112,6 +112,16 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
+    } else if (type == "DRAW_STROKE" && &conn == room.getCurrentDrawer()->getConn()) {
+        int x = packet.at("payload").at("x");
+        int y = packet.at("payload").at("y");
+        int prevX = packet.at("payload").at("prevX");
+        int prevY = packet.at("payload").at("prevY");
+        std::string color = packet.at("payload").at("color");
+        int size = packet.at("payload").at("size");
+        bool isEraser = packet.at("payload").at("isEraser");
+
+        room.sendJson(room.getHostConn(), Packet::makeDrawerSendStrokeToHost(x,y,prevX,prevY,color,size,isEraser));
     }
 }
 

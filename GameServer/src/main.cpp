@@ -13,6 +13,7 @@ int main() {
     auto app = crow::SimpleApp();
 
     std::unordered_map<std::string, std::unique_ptr<Room> > rooms;
+    std::unordered_map<crow::websocket::connection*, std::string> connectionToRoom;
     std::mutex roomsMutex;
 
     CROW_WEBSOCKET_ROUTE(app, "/ws")
@@ -20,7 +21,24 @@ int main() {
                 std::cout << "New connection\n";
             })
             .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
-                std::cout << "Connection closed: " << reason << "\n";
+                std::lock_guard<std::mutex> lock(roomsMutex);
+
+                auto it = connectionToRoom.find(&conn);
+                if (it != connectionToRoom.end()) {
+                    std::string PIN = it->second;
+                    connectionToRoom.erase(it);
+
+                    auto roomIt = rooms.find(PIN);
+                    if (roomIt != rooms.end()) {
+                        if (roomIt->second->getHostConn() == &conn) {
+                            std::cout << "Host exit. Remove room: " << PIN << "\n";
+                            rooms.erase(roomIt);
+                        } else {
+                            std::cout << "Player disconnect: " << PIN << "\n";
+                            roomIt->second->onClose(conn);
+                        }
+                    }
+                }
             })
             .onmessage([&](crow::websocket::connection &conn, const std::string &data, bool is_binary) {
                 try {
@@ -38,12 +56,17 @@ int main() {
                             return;
                         }
 
+                        connectionToRoom[&conn] = PIN;
                         std::cout << "New room created with PIN: " << PIN << "\n";
                     } else {
                         const auto it = rooms.find(PIN);
                         if (it == rooms.end()) {
                             conn.send_text(Packet::makeError("ROOM_NOT_FOUND", "Nie znaleziono pokoju").dump());
                             return;
+                        }
+
+                        if (type == "PLAYER_JOIN") {
+                            connectionToRoom[&conn] = PIN;
                         }
 
                         it->second->onPacket(conn, packet);

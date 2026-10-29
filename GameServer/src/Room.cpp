@@ -25,6 +25,11 @@ void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
     this->currentState->handlePacket(*this, conn, packet);
 }
 
+void Room::onClose(crow::websocket::connection &conn) {
+    std::lock_guard<std::mutex> lock(this->roomMutex);
+    this->currentState->handleClose(*this, conn);
+}
+
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
     this->players.emplace_back(std::string(playerName), conn);
 }
