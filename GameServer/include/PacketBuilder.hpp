@@ -86,12 +86,14 @@ namespace Packet {
         };
     }
 
-    inline json makePlayerGuessedCorrectly(std::string_view name) {
+    inline json makePlayerGuessedCorrectly(std::string_view name, int pointAwarded, int totalPoints) {
         return {
             {"type", "PLAYER_GUESSED_CORRECTLY"},
             {
                 "payload", {
-                    {"nickname", name}
+                    {"nickname", name},
+                    {"pointAwarded", pointAwarded},
+                    {"totalPoints", totalPoints}
                 }
             }
         };

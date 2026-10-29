@@ -36,7 +36,7 @@ public:
 
     Player *popNextDrawer();
 
-    void addPointsToPlayers();
+    int addPointsToPlayers(const crow::websocket::connection *conn);
 
     // Timer
     void startCountdown(int seconds);
@@ -93,6 +93,10 @@ public:
 
     [[nodiscard]] crow::websocket::connection *getHostConn() const;
 
+    [[nodiscard]] int getTimeLeft() const;
+
+    [[nodiscard]] size_t getGuessedPlayersCount() const;
+
 private:
     // State and room
     std::unique_ptr<IRoomState> currentState;
@@ -121,6 +125,7 @@ private:
     std::jthread timerThread;
     std::mutex timerMutex;
     std::condition_variable_any timerCv;
+    std::atomic<int> timeLeft{0};
 
     void roundCountdownWorker(const std::stop_token &stoken, int seconds);
 };
