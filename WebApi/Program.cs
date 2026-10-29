@@ -26,10 +26,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<app_db>();
 
-    // 1. Tworzy plik bazy i buduje tabele (Users, Words) jeśli ich nie ma
+    // tworzy plik bazy i buduje tabele (Users, Words) jeśli ich nie ma
     db.Database.Migrate();
 
-    // 2. Wypełnia tabelę początkowymi hasłami
+    // wypełnia tabelę początkowymi hasłami
     if (!db.Words.Any())
     {
         db.Words.AddRange(
@@ -38,8 +38,21 @@ using (var scope = app.Services.CreateScope())
             new words { Text = "Komputer", Difficulty = "średni" },
             new words { Text = "Żyrafa", Difficulty = "trudny" }
         );
-        db.SaveChanges();
     }
-}
+
+        if (!db.Users.Any())
+        {
+            db.Users.Add(new users
+            {
+                Username = "TestUser",
+                Email = "test@paintthat.local",
+                Passwd = "hash_hasla",          
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+    db.SaveChanges();
+    }
+
 
 app.Run();
