@@ -39,9 +39,7 @@ void RoundStartState::onEnter(Room &room) {
 
     const Player *drawer = room.popNextDrawer();
     if (!drawer) {
-        /* TODO
-         * - Implement change state to EndRound
-        */
+        room.changeState(std::make_unique<RoundEndState>());
         return;
     }
 
@@ -78,19 +76,15 @@ void WhileRoundState::onEnter(Room &room) {
 void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    /*
-     * TODO
-     * - Implement new virutal method in IRoomState handleDisconnect and check it in main onclose
-     */
-
     if (type == "SUBMIT_GUESS" && &conn != room.getCurrentDrawer()->getConn()) {
         std::string guessWord = packet.at("payload").at("guess");
         std::string nickname = room.getPlayerByConn(&conn)->getNick();
 
         switch (room.checkGuess(guessWord)) {
             case Guessing::Guessed: {
+                int pointsForGuesser = room.addPointsToPlayers(&conn);
                 room.addToGuessQueue(&conn);
-                room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname));
+                room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser, room.getPlayerByConn(&conn)->getPoints()));
 
                 if (room.isAllGuessed()) {
                     room.stopCountdown();
@@ -112,6 +106,16 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
+    } else if (type == "DRAW_STROKE" && &conn == room.getCurrentDrawer()->getConn()) {
+        int x = packet.at("payload").at("x");
+        int y = packet.at("payload").at("y");
+        int prevX = packet.at("payload").at("prevX");
+        int prevY = packet.at("payload").at("prevY");
+        std::string color = packet.at("payload").at("color");
+        int size = packet.at("payload").at("size");
+        bool isEraser = packet.at("payload").at("isEraser");
+
+        room.sendJson(room.getHostConn(), Packet::makeDrawerSendStrokeToHost(x,y,prevX,prevY,color,size,isEraser));
     }
 }
 
@@ -126,6 +130,7 @@ void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn)
 }
 
 void RoundEndState::onEnter(Room &room) {
+
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {

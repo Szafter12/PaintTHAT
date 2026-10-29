@@ -25,6 +25,11 @@ void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
     this->currentState->handlePacket(*this, conn, packet);
 }
 
+void Room::onClose(crow::websocket::connection &conn) {
+    std::lock_guard<std::mutex> lock(this->roomMutex);
+    this->currentState->handleClose(*this, conn);
+}
+
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
     this->players.emplace_back(std::string(playerName), conn);
 }
@@ -156,15 +161,24 @@ Player *Room::popNextDrawer() {
     return nullptr;
 }
 
-void Room::addPointsToPlayers() {
-    /*
-     * TODO
-     * - Implement point system similar to this from Scribble.io
-     * -- If player guess before half time max point
-     * -- After half time some point less
-     * -- After one player guess every next get less points
-     * - For drawing player its scale with people who guess amount
-     */
+int Room::addPointsToPlayers(const crow::websocket::connection *conn) {
+    int order = this->getGuessedPlayersCount();
+
+    int pointsForGuesser = std::max(100, 400 - (order * 50));
+
+    if (this->timeLeft > (this->roundTime / 2)) {
+        pointsForGuesser += 150;
+    }
+
+    int pointsForDrawer = 50;
+
+    Player* guesser = this->getPlayerByConn(conn);
+    Player* drawer = this->getCurrentDrawer();
+
+    if (guesser) guesser->addPoints(pointsForGuesser);
+    if (drawer) drawer->addPoints(pointsForDrawer);
+
+    return pointsForGuesser;
 }
 
 void Room::sendJson(crow::websocket::connection *conn, const nlohmann::json &packet) {
@@ -244,6 +258,14 @@ crow::websocket::connection *Room::getHostConn() const {
     return this->hostConn;
 }
 
+int Room::getTimeLeft() const {
+    return this->timeLeft;
+}
+
+size_t Room::getGuessedPlayersCount() const {
+    return this->guessedQueue.size();
+}
+
 void Room::startCountdown(int seconds) {
     stopCountdown();
     this->round_ends_holder = false;
@@ -267,6 +289,7 @@ void Room::stopCountdown() {
 void Room::roundCountdownWorker(const std::stop_token &stoken, int seconds) {
     for (int i = seconds; i > 0; --i) {
         {
+            this->timeLeft.store(i);
             std::unique_lock<std::mutex> timerLock(this->timerMutex);
             if (this->timerCv.wait_for(timerLock, stoken, std::chrono::seconds(1), [] { return false; })) {
                 return;
