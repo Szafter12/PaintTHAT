@@ -65,6 +65,7 @@ public:
     void addToGuessQueue(const crow::websocket::connection *conn);
 
     void initWordPool(const std::vector<std::string> &words);
+    void nextRound();
 
     // Getters
     const std::vector<Player> &getPlayers() const;
@@ -86,6 +87,8 @@ public:
     [[nodiscard]] const std::string &getPin() const;
 
     [[nodiscard]] int getRoundTime() const;
+
+    [[nodiscard]] int getCurrentRound() const;
 
     [[nodiscard]] int getMaxRounds() const;
 

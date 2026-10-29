@@ -200,12 +200,20 @@ void Room::initWordPool(const std::vector<std::string> &words) {
     std::ranges::shuffle(this->wordsPool, getRng());
 }
 
+void Room::nextRound() {
+    this->currentRound++;
+}
+
 bool Room::isEndGame() const {
     return this->currentRound > this->maxRounds;
 }
 
 int Room::getRoundTime() const {
     return this->roundTime;
+}
+
+int Room::getCurrentRound() const {
+    return this->currentRound;
 }
 
 int Room::getMaxRounds() const {

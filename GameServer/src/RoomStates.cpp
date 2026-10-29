@@ -35,6 +35,7 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 }
 
 void RoundStartState::onEnter(Room &room) {
+    room.nextRound();
     if (room.is_drawStackEmpty()) room.prepareNewRoundQueue();
 
     const Player *drawer = room.popNextDrawer();
@@ -131,6 +132,11 @@ void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn)
 
 void RoundEndState::onEnter(Room &room) {
 
+    if (room.getCurrentRound() == room.getMaxRounds()) {
+        room.changeState(std::make_unique<EndGameState>());
+    } else {
+        room.changeState(std::make_unique<RoundStartState>());
+    }
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
