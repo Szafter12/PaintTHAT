@@ -11,7 +11,6 @@ interface PlayerMenuProps {
 export function PlayerMenu({ initialRoomCode, selectedAvatar, onJoinLobby, onBack }: PlayerMenuProps) {
   const avatars = ASSETS.avatars;
   
-
   const initialIndex = avatars.indexOf(selectedAvatar) !== -1 ? avatars.indexOf(selectedAvatar) : 0;
   const [index, setIndex] = useState(initialIndex);
   

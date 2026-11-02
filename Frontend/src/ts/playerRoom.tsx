@@ -24,17 +24,11 @@ export function PlayerRoom({ roomCode, nickname, avatar, onLeave }: PlayerRoomPr
       </p>
 
       <button 
-        className="ready-button"  
-        style={{ marginTop: '30px' }}
-      >
-        Gotowy
-      </button>
-
-      <button 
         className="return-button" 
         onClick={onLeave} 
         style={{ marginTop: '30px' }}
-      />
+      >
+      </button>
     </div>
   );
 }
