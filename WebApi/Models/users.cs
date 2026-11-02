@@ -9,7 +9,8 @@ namespace WebApi.Models
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Passwd { get; set; } = string.Empty;
-        public int Score { get; set; }
+
+        //public int Score { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 
