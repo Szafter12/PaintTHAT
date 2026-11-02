@@ -130,6 +130,7 @@ export function Host({ username, selectedAvatar, players = [], onRoomCreated, on
             id="join-lobby-btn" 
             style={{ marginTop: '20px' }} 
             onClick={onStartGame}/>
+
         </div>
       </main>
     </div>
