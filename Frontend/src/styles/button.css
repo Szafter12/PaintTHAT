@@ -1,0 +1,146 @@
+.start-button {
+  
+  background-image: var(--start-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.start-button:hover {
+   background-image: var(--start-hover-img);
+}
+
+.return-button {
+  background-image: var(--return-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 180px;
+  height: 90px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.return-button:hover {
+   background-image: var(--return-hover-img);
+}
+
+.left-avatar-btn {
+  background-image: var(--left-avatar-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 100px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.left-avatar-btn:hover {
+   background-image: var(--left-avatar-hover-img);
+}
+
+.right-avatar-btn {
+  background-image: var(--right-avatar-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 100px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.right-avatar-btn:hover {
+   background-image: var(--right-avatar-hover-img);
+}
+
+.host-button {
+  background-image: var(--host-img);		
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.host-button:hover {
+   background-image: var(--host-hover-img);
+}
+
+.player-button {
+  background-image: var(--player-img); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.player-button:hover {
+   background-image: var(--player-hover-img);
+}
+
+.signin-button{
+  background-image: var(--signin-img); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.signin-button:hover {
+   background-image: var(--signin-hover-img);
+}
+
+.signup-button{
+  background-image: var(--signup-img); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 200px;
+  height: 100px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+.signup-button:hover {
+   background-image: var(--signup-hover-img);
+}
+
+.logout-btn {
+  background-image: var(--return-img); 
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  border: none; 
+  width: 100px;
+  height: 50px;
+  cursor: pointer;    
+  transition: transform 0.1s;
+}
+
+.logout-btn:hover {
+   background-image: var(--return-hover-img);
+}
