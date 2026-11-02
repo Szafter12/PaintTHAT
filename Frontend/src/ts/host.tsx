@@ -1,33 +1,30 @@
 import { useState, KeyboardEvent } from 'react';
 import '../styles/host.css';
-
-interface PlayerInfo {
+export interface PlayerInfo {
   nickname: string;
   avatar: string;
+  points: number;
+  isDrawer: boolean;
+  isGuessed: boolean;
 }
 
 interface HostProps {
   username: string;
   selectedAvatar: string;
   players: PlayerInfo[];
-  onRoomCreated: (code: string) => void;
+  roomCode: string;
   onStartGame: () => void;
   onLogout: () => void;
 }
 
-export function Host({ username, selectedAvatar, players = [], onRoomCreated, onStartGame, onLogout }: HostProps) {
+export function Host({ username, selectedAvatar, players = [], roomCode, onStartGame, onLogout }: HostProps) {
+
   const [customWords, setCustomWords] = useState<string[]>([]);
   const [wordInput, setWordInput] = useState('');
-  const [roomCode, setRoomCode] = useState<string | null>(null);
 
-  const handleCreateLobby = () => {
-    const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-    setRoomCode(generatedCode);
-    
-    if (onRoomCreated) {
-      onRoomCreated(generatedCode);
-    }
-  };
+
+  const [maxRounds, setMaxRounds] = useState<number>(3);
+  const [roundTime, setRoundTime] = useState<number>(60);
 
   const handleAddWord = () => {
     const trimmed = wordInput.trim();
@@ -41,6 +38,10 @@ export function Host({ username, selectedAvatar, players = [], onRoomCreated, on
     if (e.key === 'Enter') {
       handleAddWord();
     }
+  };
+
+  const handleStartGameClick = () => {
+    onStartGame(); 
   };
 
   return (
@@ -64,40 +65,61 @@ export function Host({ username, selectedAvatar, players = [], onRoomCreated, on
 
       <main className="host-main">
         <div className="panel left-panel">
-          <h2>Kod Pokoju: {roomCode ? <span style={{ color: '#ff0055' }}>{roomCode}</span> : '----'}</h2>
-
-          {!roomCode ? (
-            <button 
-              id="create-lobby-btn" 
-              className="create-lobby-btn" 
-              onClick={handleCreateLobby}
-            >
-              Stwórz Pokój
-            </button>
-          ) : (
-            <p style={{ fontSize: '18px', color: '#aaa', marginTop: '10px' }}>
-              Podaj ten kod graczom, aby mogli dołączyć.
-            </p>
-          )}
+          <h2>Kod Pokoju: <span style={{ color: '#ff0055' }}>{roomCode}</span></h2>
+          <p style={{ fontSize: '18px', color: '#aaa', marginTop: '10px' }}>
+            Podaj ten kod graczom, aby mogli dołączyć.
+          </p>
 
           <h3>Ustawienia:</h3>
           <div className="control-group">
-            <label htmlFor="round">ilość rund:</label>
-            <input type="text" id="round" className="game-input" placeholder="Wpisz liczbę rund..." />
+            <label htmlFor="round">Ilość rund:</label>
+            <input 
+              type="number" 
+              id="round" 
+              className="game-input" 
+              value={maxRounds}
+              onChange={(e) => setMaxRounds(Number(e.target.value))}
+              placeholder="Wpisz liczbę rund..." 
+            />
           </div>
           <div className="control-group">
-            <label htmlFor="time">długość rundy:</label>
-            <input type="text" id="time" className="game-input" placeholder="Wpisz długość rundy..." />
+            <label htmlFor="time">Długość rundy (s):</label>
+            <input 
+              type="number" 
+              id="time" 
+              className="game-input" 
+              value={roundTime}
+              onChange={(e) => setRoundTime(Number(e.target.value))}
+              placeholder="Wpisz długość rundy..." 
+            />
           </div>
+
+          <h3>Własne słowa (opcjonalnie):</h3>
+          <div className="control-group" style={{ flexDirection: 'row', gap: '10px' }}>
+            <input 
+              type="text" 
+              className="game-input" 
+              value={wordInput}
+              onChange={(e) => setWordInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Dodaj własne hasło..." 
+            />
+            <button onClick={handleAddWord} style={{ padding: '10px 20px', cursor: 'pointer' }}>+</button>
+          </div>
+          <ul style={{ listStyleType: 'none', padding: 0, marginTop: '10px', color: 'white' }}>
+            {customWords.map((word, idx) => (
+              <li key={idx}>- {word}</li>
+            ))}
+          </ul>
         </div>
         
         <div className="panel right-panel">
-          <h3 className="panel-subtitle">POŁĄCZENI GRACZE</h3>
+          <h3 className="panel-subtitle">POŁĄCZENI GRACZE ({players.length})</h3>
 
           <div className="players-list-container" style={{ margin: '15px 0', width: '100%', minHeight: '80px' }}>
             <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
               {players.length === 0 ? (
-                <li style={{ color: 'gray', fontSize: '18px' }}>Brak połączonych graczy...</li>
+                <li style={{ color: 'gray', fontSize: '18px' }}>Oczekiwanie na graczy...</li>
               ) : (
                 players.map((player, index) => (
                   <li 
@@ -129,7 +151,10 @@ export function Host({ username, selectedAvatar, players = [], onRoomCreated, on
             className="start-button" 
             id="join-lobby-btn" 
             style={{ marginTop: '20px' }} 
-            onClick={onStartGame}/>
+            onClick={handleStartGameClick}
+            disabled={players.length === 0} 
+          >
+          </button>
 
         </div>
       </main>

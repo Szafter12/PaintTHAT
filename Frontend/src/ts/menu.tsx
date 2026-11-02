@@ -37,6 +37,7 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
       {activeSection === 'main' && (
         <div className="menu-buttons">
           <button className="host-button" onClick={() => setActiveSection('host')} />
+          
           <button className="player-button" onClick={() => onPLAYER('', avatars[index])} />
         </div>
       )}
@@ -71,7 +72,7 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
               placeholder="Wpisz hasło..." 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-            />	
+            />  
           </div>
           <button className="return-button" onClick={() => setActiveSection('host')} />
           <button className="start-button" onClick={() => onHOST(username || 'Gracz', avatars[index])} />
@@ -100,7 +101,7 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
               placeholder="Wpisz hasło..." 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-            />	
+            />  
           </div>
           <button className="return-button" onClick={() => setActiveSection('host')} />
           <button className="start-button" onClick={() => onHOST(username || 'NowyGracz', avatars[index])} />
