@@ -29,13 +29,14 @@ public:
     void changeState(std::unique_ptr<IRoomState> newState);
 
     void onPacket(crow::websocket::connection &conn, const json &packet);
+    void onClose(crow::websocket::connection &conn);
 
     // Handling players
     void addPlayer(crow::websocket::connection &conn, std::string_view playerName);
 
     Player *popNextDrawer();
 
-    void addPointsToPlayers();
+    int addPointsToPlayers(const crow::websocket::connection *conn);
 
     // Timer
     void startCountdown(int seconds);
@@ -64,6 +65,7 @@ public:
     void addToGuessQueue(const crow::websocket::connection *conn);
 
     void initWordPool(const std::vector<std::string> &words);
+    void nextRound();
 
     // Getters
     const std::vector<Player> &getPlayers() const;
@@ -86,11 +88,17 @@ public:
 
     [[nodiscard]] int getRoundTime() const;
 
+    [[nodiscard]] int getCurrentRound() const;
+
     [[nodiscard]] int getMaxRounds() const;
 
     [[nodiscard]] const std::string &getSecretWord() const;
 
     [[nodiscard]] crow::websocket::connection *getHostConn() const;
+
+    [[nodiscard]] int getTimeLeft() const;
+
+    [[nodiscard]] size_t getGuessedPlayersCount() const;
 
 private:
     // State and room
@@ -120,6 +128,7 @@ private:
     std::jthread timerThread;
     std::mutex timerMutex;
     std::condition_variable_any timerCv;
+    std::atomic<int> timeLeft{0};
 
     void roundCountdownWorker(const std::stop_token &stoken, int seconds);
 };

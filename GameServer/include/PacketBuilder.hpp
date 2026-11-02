@@ -86,12 +86,14 @@ namespace Packet {
         };
     }
 
-    inline json makePlayerGuessedCorrectly(std::string_view name) {
+    inline json makePlayerGuessedCorrectly(std::string_view name, int pointAwarded, int totalPoints) {
         return {
             {"type", "PLAYER_GUESSED_CORRECTLY"},
             {
                 "payload", {
-                    {"nickname", name}
+                    {"nickname", name},
+                    {"pointAwarded", pointAwarded},
+                    {"totalPoints", totalPoints}
                 }
             }
         };
@@ -128,6 +130,22 @@ namespace Packet {
                 "payload", {
                     {"nickname", drawerNick}
                 }
+            }
+        };
+    }
+
+    inline json makeDrawerSendStrokeToHost(int x, int y, int prevX, int prevY, std::string_view color, int size, bool isEraser) {
+        return {
+            {"type", "DRAW_BROADCAST"},
+            {"payload", {
+                {"x", x},
+                {"y", y},
+                {"prevX", prevX},
+                {"prevY", prevY},
+                {"color", color},
+                {"size", size},
+                {"isEraser", isEraser}
+              }
             }
         };
     }
