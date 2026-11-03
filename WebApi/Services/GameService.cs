@@ -21,7 +21,6 @@ public class GameService : IGameService
         string pin;
         bool pinExists;
 
-        // Losujemy 4-cyfrowy PIN dopóki nie trafimy na wolny wśród aktywnych gier
         do
         {
             pin = Random.Shared.Next(1000, 10000).ToString();
@@ -55,26 +54,22 @@ public class GameService : IGameService
         if (game == null)
             throw new KeyNotFoundException($"Nie znaleziono gry o kodzie PIN: {dto.Pin}");
 
-        // 1. Odcinamy nagłówek "data:image/webp;base64," jeśli istnieje
         var base64Data = dto.ImageBase64.Contains(',')
             ? dto.ImageBase64[(dto.ImageBase64.IndexOf(',') + 1)..]
             : dto.ImageBase64;
 
         byte[] imageBytes = Convert.FromBase64String(base64Data);
 
-        // 2. Upewniamy się, że folder wwwroot/drawings istnieje
         var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
         var drawingsFolder = Path.Combine(webRoot, "drawings");
         Directory.CreateDirectory(drawingsFolder);
 
-        // 3. Zapisujemy plik na dysku
         var fileName = $"game_{game.Pin}_r{dto.RoundNumber}_{Guid.NewGuid():N}.webp";
         var filePath = Path.Combine(drawingsFolder, fileName);
         await File.WriteAllBytesAsync(filePath, imageBytes);
 
         var relativeUrl = $"/drawings/{fileName}";
 
-        // 4. Zapisujemy rekord rundy w bazie SQLite
         var roundRecord = new RoundRecord
         {
             GameSessionId = game.Id,

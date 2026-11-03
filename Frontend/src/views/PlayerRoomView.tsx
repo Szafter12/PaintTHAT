@@ -1,13 +1,13 @@
 import '../styles/menu.css';
 
-interface PlayerRoomProps {
+interface PlayerRoomViewProps {
   roomCode: string;
   nickname: string;
   avatar: string;
   onLeave: () => void;
 }
 
-export function PlayerRoom({ roomCode, nickname, avatar, onLeave }: PlayerRoomProps) {
+export function PlayerRoomView({ roomCode, nickname, avatar, onLeave }: PlayerRoomViewProps) {
   return (
     <div className="menu" style={{ textAlign: 'center', padding: '40px' }}>
       <div className="avatar-display" style={{ margin: '0 auto 20px' }}>
@@ -23,9 +23,9 @@ export function PlayerRoom({ roomCode, nickname, avatar, onLeave }: PlayerRoomPr
         Czekamy, aż Host rozpocznie grę...
       </p>
 
-      <button 
-        className="return-button" 
-        onClick={onLeave} 
+      <button
+        className="return-button"
+        onClick={onLeave}
         style={{ marginTop: '30px' }}
       >
       </button>

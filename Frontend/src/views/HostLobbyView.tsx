@@ -1,27 +1,26 @@
 import { useState, KeyboardEvent } from 'react';
+import type { GameSettings, PlayerInfo } from '../types/game'; // <-- DODANE 'type'
 import '../styles/host.css';
-export interface PlayerInfo {
-  nickname: string;
-  avatar: string;
-  points: number;
-  isDrawer: boolean;
-  isGuessed: boolean;
-}
 
-interface HostProps {
+interface HostLobbyViewProps {
   username: string;
   selectedAvatar: string;
   players: PlayerInfo[];
   roomCode: string;
-  onStartGame: () => void;
+  onStartGame: (settings: GameSettings) => void;
   onLogout: () => void;
 }
 
-export function Host({ username, selectedAvatar, players = [], roomCode, onStartGame, onLogout }: HostProps) {
-
+export function HostLobbyView({
+  username,
+  selectedAvatar,
+  players = [],
+  roomCode,
+  onStartGame,
+  onLogout,
+}: HostLobbyViewProps) {
   const [customWords, setCustomWords] = useState<string[]>([]);
-  const [wordInput, setWordInput] = useState('');
-
+  const [wordInput, setWordInput] = useState<string>('');
 
   const [maxRounds, setMaxRounds] = useState<number>(3);
   const [roundTime, setRoundTime] = useState<number>(60);
@@ -29,7 +28,7 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
   const handleAddWord = () => {
     const trimmed = wordInput.trim();
     if (trimmed !== '') {
-      setCustomWords([...customWords, trimmed]);
+      setCustomWords((prev) => [...prev, trimmed]);
       setWordInput('');
     }
   };
@@ -41,7 +40,11 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
   };
 
   const handleStartGameClick = () => {
-    onStartGame(); 
+    onStartGame({
+      maxRounds,
+      roundTime,
+      customWords,
+    });
   };
 
   return (
@@ -52,10 +55,10 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
         </div>
         <div className="user-actions">
           {selectedAvatar && (
-            <img 
-              src={selectedAvatar} 
-              alt="Avatar Hosta" 
-              style={{ width: '35px', height: '35px', borderRadius: '50%' }} 
+            <img
+              src={selectedAvatar}
+              alt="Avatar Hosta"
+              style={{ width: '35px', height: '35px', borderRadius: '50%' }}
             />
           )}
           <div className="host-profile">{username}</div>
@@ -73,36 +76,36 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
           <h3>Ustawienia:</h3>
           <div className="control-group">
             <label htmlFor="round">Ilość rund:</label>
-            <input 
-              type="number" 
-              id="round" 
-              className="game-input" 
+            <input
+              type="number"
+              id="round"
+              className="game-input"
               value={maxRounds}
               onChange={(e) => setMaxRounds(Number(e.target.value))}
-              placeholder="Wpisz liczbę rund..." 
+              placeholder="Wpisz liczbę rund..."
             />
           </div>
           <div className="control-group">
             <label htmlFor="time">Długość rundy (s):</label>
-            <input 
-              type="number" 
-              id="time" 
-              className="game-input" 
+            <input
+              type="number"
+              id="time"
+              className="game-input"
               value={roundTime}
               onChange={(e) => setRoundTime(Number(e.target.value))}
-              placeholder="Wpisz długość rundy..." 
+              placeholder="Wpisz długość rundy..."
             />
           </div>
 
           <h3>Własne słowa (opcjonalnie):</h3>
           <div className="control-group" style={{ flexDirection: 'row', gap: '10px' }}>
-            <input 
-              type="text" 
-              className="game-input" 
+            <input
+              type="text"
+              className="game-input"
               value={wordInput}
               onChange={(e) => setWordInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Dodaj własne hasło..." 
+              placeholder="Dodaj własne hasło..."
             />
             <button onClick={handleAddWord} style={{ padding: '10px 20px', cursor: 'pointer' }}>+</button>
           </div>
@@ -112,7 +115,7 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
             ))}
           </ul>
         </div>
-        
+
         <div className="panel right-panel">
           <h3 className="panel-subtitle">POŁĄCZENI GRACZE ({players.length})</h3>
 
@@ -122,22 +125,22 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
                 <li style={{ color: 'gray', fontSize: '18px' }}>Oczekiwanie na graczy...</li>
               ) : (
                 players.map((player, index) => (
-                  <li 
-                    key={index} 
-                    style={{ 
-                      color: 'white', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '12px', 
-                      marginBottom: '10px', 
-                      fontSize: '22px' 
+                  <li
+                    key={index}
+                    style={{
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '10px',
+                      fontSize: '22px'
                     }}
                   >
                     {player.avatar && (
-                      <img 
-                        src={player.avatar} 
-                        alt={player.nickname} 
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'contain' }} 
+                      <img
+                        src={player.avatar}
+                        alt={player.nickname}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'contain' }}
                       />
                     )}
                     <span>{player.nickname}</span>
@@ -147,15 +150,14 @@ export function Host({ username, selectedAvatar, players = [], roomCode, onStart
             </ul>
           </div>
 
-          <button 
-            className="start-button" 
-            id="join-lobby-btn" 
-            style={{ marginTop: '20px' }} 
+          <button
+            className="start-button"
+            id="join-lobby-btn"
+            style={{ marginTop: '20px' }}
             onClick={handleStartGameClick}
-            disabled={players.length === 0} 
+            disabled={players.length === 0}
           >
           </button>
-
         </div>
       </main>
     </div>

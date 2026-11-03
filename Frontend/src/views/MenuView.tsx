@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { ASSETS } from './assets';
+import { ASSETS } from '../assets';
 import '../styles/menu.css';
 
-interface MenuProps {
+interface MenuViewProps {
   onHOST: (username: string, avatar: string) => void;
   onPLAYER: (roomCode: string, avatar: string) => void;
 }
 
-export function Menu({ onHOST, onPLAYER }: MenuProps) {
-  const [index, setIndex] = useState(0);
-  const [activeSection, setActiveSection] = useState<'main' | 'host' | 'signin' | 'signup'>('main');
+type MenuSection = 'main' | 'host' | 'signin' | 'signup';
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export function MenuView({ onHOST, onPLAYER }: MenuViewProps) {
+  const [index, setIndex] = useState<number>(0);
+  const [activeSection, setActiveSection] = useState<MenuSection>('main');
+
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
 
   const avatars = ASSETS.avatars;
 
@@ -21,15 +23,15 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
       <img src={ASSETS.logo} alt="Logo" className="logo" />
 
       <div className="avatar-selection">
-        <button 
-          className="left-avatar-btn" 
+        <button
+          className="left-avatar-btn"
           onClick={() => setIndex((index - 1 + avatars.length) % avatars.length)}
         />
         <div className="avatar-display">
           <img src={avatars[index]} alt="Avatar" className="avatar" />
         </div>
-        <button 
-          className="right-avatar-btn" 
+        <button
+          className="right-avatar-btn"
           onClick={() => setIndex((index + 1) % avatars.length)}
         />
       </div>
@@ -37,7 +39,6 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
       {activeSection === 'main' && (
         <div className="menu-buttons">
           <button className="host-button" onClick={() => setActiveSection('host')} />
-          
           <button className="player-button" onClick={() => onPLAYER('', avatars[index])} />
         </div>
       )}
@@ -54,25 +55,25 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
         <div id="login-section-host">
           <div className="control-group">
             <label htmlFor="username">Nick/Email:</label>
-            <input 
-              type="text" 
-              id="username" 
-              className="game-input" 
-              placeholder="Wpisz nick..." 
+            <input
+              type="text"
+              id="username"
+              className="game-input"
+              placeholder="Wpisz nick..."
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div className="control-group">
             <label htmlFor="password">Hasło:</label>
-            <input 
-              type="password" 
-              id="password" 
-              className="game-input" 
-              placeholder="Wpisz hasło..." 
+            <input
+              type="password"
+              id="password"
+              className="game-input"
+              placeholder="Wpisz hasło..."
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-            />  
+            />
           </div>
           <button className="return-button" onClick={() => setActiveSection('host')} />
           <button className="start-button" onClick={() => onHOST(username || 'Gracz', avatars[index])} />
@@ -83,25 +84,25 @@ export function Menu({ onHOST, onPLAYER }: MenuProps) {
         <div id="register-section-host">
           <div className="control-group">
             <label htmlFor="signup-username">Nick/Email:</label>
-            <input 
-              type="text" 
-              id="signup-username" 
-              className="game-input" 
-              placeholder="Wpisz nick..." 
+            <input
+              type="text"
+              id="signup-username"
+              className="game-input"
+              placeholder="Wpisz nick..."
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div className="control-group">
             <label htmlFor="signup-password">Hasło:</label>
-            <input 
-              type="password" 
-              id="signup-password" 
-              className="game-input" 
-              placeholder="Wpisz hasło..." 
+            <input
+              type="password"
+              id="signup-password"
+              className="game-input"
+              placeholder="Wpisz hasło..."
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-            />  
+            />
           </div>
           <button className="return-button" onClick={() => setActiveSection('host')} />
           <button className="start-button" onClick={() => onHOST(username || 'NowyGracz', avatars[index])} />

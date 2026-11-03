@@ -1,22 +1,22 @@
 :root {
-  --logo-img: url('../images/LOGO.gif');
-  --start-img: url('../images/START0.gif');
-  --start-hover-img: url('../images/START1(1).gif');
-  --return-img: url('../images/RETURN0.gif');
-  --return-hover-img: url('../images/RETURN1.gif');
-  --host-img: url('../images/HOST0.gif');
-  --host-hover-img: url('../images/HOST1.gif');
-  --player-img: url('../images/PLAYER0.gif');
-  --player-hover-img: url('../images/PLAYER1.gif');
-  --left-avatar-img: url('../images/LEFT0.gif');
-  --left-avatar-hover-img: url('../images/LEFT1.gif');
-  --right-avatar-img: url('../images/RIGHT0.gif');
-  --right-avatar-hover-img: url('../images/RIGHT1.gif');
-  --signin-img: url('../images/signin0.gif');
-  --signin-hover-img: url('../images/signin1.gif');
-  --signup-img: url('../images/signup0.gif');
-  --signup-hover-img: url('../images/signup1.gif');
-  --border-img: url('../images/BORDER.gif');
+  --logo-img: url('../assets/images/LOGO.gif');
+  --start-img: url('../assets/images/START0.gif');
+  --start-hover-img: url('../assets/images/START1(1).gif');
+  --return-img: url('../assets/images/RETURN0.gif');
+  --return-hover-img: url('../assets/images/RETURN1.gif');
+  --host-img: url('../assets/images/HOST0.gif');
+  --host-hover-img: url('../assets/images/HOST1.gif');
+  --player-img: url('../assets/images/PLAYER0.gif');
+  --player-hover-img: url('../assets/images/PLAYER1.gif');
+  --left-avatar-img: url('../assets/images/LEFT0.gif');
+  --left-avatar-hover-img: url('../assets/images/LEFT1.gif');
+  --right-avatar-img: url('../assets/images/RIGHT0.gif');
+  --right-avatar-hover-img: url('../assets/images/RIGHT1.gif');
+  --signin-img: url('../assets/images/signin0.gif');
+  --signin-hover-img: url('../assets/images/signin1.gif');
+  --signup-img: url('../assets/images/signup0.gif');
+  --signup-hover-img: url('../assets/images/signup1.gif');
+  --border-img: url('../assets/images/BORDER.gif');
   
 
 
