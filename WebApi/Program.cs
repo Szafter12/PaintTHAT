@@ -7,8 +7,10 @@ using WebApi.Services;
 * - Rejestracja hosta (email, haslo, haslo_powtorzenie, create_at, is_active, )
 * - logowanie
 * - Polaczenie z google
+* - reset hasla
+* - profil Hosta 
 * - Jak host usunie pokojo (wyjdzie z gry albo cos) to musisz dac isActive na 0
-* -  
+* - Dodanie swaggera
 */
 
 var builder = WebApplication.CreateBuilder(args);

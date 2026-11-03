@@ -1,7 +1,8 @@
 @Address = http://localhost:5098
 
 POST {{Address}}/api/rooms/create
-Accept: application/json
+Content-Type: application/json
+
 
 
 ###
