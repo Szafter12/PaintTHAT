@@ -1,1 +1,7 @@
-@WebApi_HostAddress = http://localhost:5024
+@Address = http://localhost:5098
+
+POST {{Address}}/api/rooms/create
+Accept: application/json
+
+
+###
