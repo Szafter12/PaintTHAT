@@ -1,4 +1,4 @@
-# ADR 0006: Zapis i obsługa historii gier (C++ Server & ASP.NET Core)
+# ADR 0005: Zapis i obsługa historii gier (C++ Server & ASP.NET Core)
 
 **Data:** 2026-11-01
 **Status:** Zaakceptowany
