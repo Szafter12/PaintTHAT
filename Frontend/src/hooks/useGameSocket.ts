@@ -68,13 +68,40 @@ export function useGameSocket({
           case 'LOBBY_UPDATE':
             onLobbyUpdate(data.payload.players || []);
             break;
-
           case 'GAME_STARTED':
             onGameStarted();
             break;
+            
+          // C++ wysyła CHOOSE_WORD (tylko do Rysownika, z listą słów)
+          case 'CHOOSE_WORD':
+            window.dispatchEvent(new CustomEvent('choose-word', { detail: data.payload.words }));
+            break;
+            
+          // C++ wysyła WAITING_FOR_WORD (do zgadujących, podaje tylko nick)
+          case 'WAITING_FOR_WORD':
+            window.dispatchEvent(new CustomEvent('waiting-for-word', { detail: data.payload.drawer }));
+            break;
+            
+          case 'TIME_LEFT':
+            window.dispatchEvent(new CustomEvent('time-left', { detail: data.payload.time }));
+            break;
+            
+          case 'PLAYER_GUESSED_CORRECTLY':
+            onPlayerGuessed(data.payload.nickname, data.payload.pointAwarded);
+            break;
 
-          case 'PLAYER_GUESSED':
-            onPlayerGuessed(data.payload.nickname, data.payload.earnedPoints);
+          // NOWE: Błędne zgadnięcia lub literówki (przekazujemy do App.tsx)
+          case 'PLAYER_GUESSED_MISS':
+            window.dispatchEvent(new CustomEvent('guess-miss', { detail: data.payload }));
+            break;
+            
+          case 'PLAYER_GUESSED_ALMOST':
+            window.dispatchEvent(new CustomEvent('guess-almost', { detail: data.payload }));
+            break;
+
+          // Rysowanie z C++ do TV
+          case 'DRAW_BROADCAST':
+            window.dispatchEvent(new CustomEvent('draw-broadcast', { detail: data.payload }));
             break;
 
           case 'ERROR':

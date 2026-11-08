@@ -1,0 +1,37 @@
+services:
+  webapi:
+    build:
+      context: ./WebApi
+      dockerfile: Dockerfile
+    container_name: paintthat-webapi
+    ports:
+      - "5098:5098"
+    volumes:
+      - webapi_data:/workspace/data
+      - webapi_drawings:/workspace/wwwroot/drawings
+    restart: unless-stopped
+
+  gameserver:
+    build:
+      context: ./GameServer
+      dockerfile: Dockerfile
+    container_name: paintthat-gameserver
+    ports:
+      - "18080:18080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: paintthat-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - webapi
+      - gameserver
+    restart: unless-stopped
+
+volumes:
+  webapi_data:
+  webapi_drawings:  

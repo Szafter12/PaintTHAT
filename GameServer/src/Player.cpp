@@ -5,6 +5,12 @@ Player::Player(const std::string &nick, crow::websocket::connection &conn)
 }
 
 void Player::addPoints(const int amount) {
+    if (this->isDrawer) {
+        this->pointsCurrentRound += amount;
+        return;
+    }
+
+    this->pointsCurrentRound = amount;
     this->points += amount;
 }
 
@@ -32,6 +38,14 @@ void Player::setIsGuessed(bool guessed) {
     this->isGuessed = guessed;
 }
 
+void Player::resetCurrentRoundPoints() {
+    this->pointsCurrentRound = 0;
+}
+
 crow::websocket::connection *Player::getConn() const {
     return this->conn;
+}
+
+int Player::getPointsCurrentRound() const {
+    return this->pointsCurrentRound;
 }

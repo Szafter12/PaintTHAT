@@ -22,14 +22,19 @@ public:
 
     [[nodiscard]] crow::websocket::connection *getConn() const;
 
+    [[nodiscard]] int getPointsCurrentRound() const;
+
     // Setters
     void setIsDrawer(bool drawer);
 
     void setIsGuessed(bool guessed);
 
+    void resetCurrentRoundPoints();
+
 private:
     std::string nickname{"No name"};
     int points{0};
+    int pointsCurrentRound{0};
     bool isDrawer{false};
     bool isGuessed{false};
     crow::websocket::connection *conn{nullptr};
