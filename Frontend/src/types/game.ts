@@ -25,3 +25,10 @@ export interface GameSettings {
   roundTime: number;
   customWords: string[];
 }
+
+export interface ChatMessage {
+  id: number;
+  nickname: string;
+  text: string;
+  type: 'miss' | 'almost' | 'correct';
+}

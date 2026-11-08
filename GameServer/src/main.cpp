@@ -13,7 +13,7 @@ int main() {
     auto app = crow::SimpleApp();
 
     std::unordered_map<std::string, std::unique_ptr<Room> > rooms;
-    std::unordered_map<crow::websocket::connection*, std::string> connectionToRoom;
+    std::unordered_map<crow::websocket::connection *, std::string> connectionToRoom;
     std::mutex roomsMutex;
 
     CROW_WEBSOCKET_ROUTE(app, "/ws")
@@ -21,6 +21,11 @@ int main() {
                 std::cout << "New connection\n";
             })
             .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
+                /*
+                 * TODO
+                 * - add notification to every roomState while player close the conn
+                 * - refresh host
+                */
                 std::lock_guard<std::mutex> lock(roomsMutex);
 
                 auto it = connectionToRoom.find(&conn);

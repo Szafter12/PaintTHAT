@@ -1,4 +1,5 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { GameSettings, PlayerInfo } from '../types/game'; // <-- DODANE 'type'
 import '../styles/host.css';
 
