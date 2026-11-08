@@ -52,6 +52,15 @@ namespace Packet {
         };
     }
 
+    inline json makeGameStarted() {
+        return {
+            {"type", "GAME_STARTED"},
+            {
+                "payload", {}
+            }
+        };
+    }
+
     inline json makeWaitingForWord(std::string_view drawerNick) {
         return {
             {"type", "WAITING_FOR_WORD"},
@@ -134,18 +143,44 @@ namespace Packet {
         };
     }
 
-    inline json makeDrawerSendStrokeToHost(int x, int y, int prevX, int prevY, std::string_view color, int size, bool isEraser) {
+    inline json makeDrawerSendStrokeToHost(int x, int y, int prevX, int prevY, std::string_view color, int size,
+                                           bool isEraser) {
         return {
             {"type", "DRAW_BROADCAST"},
-            {"payload", {
-                {"x", x},
-                {"y", y},
-                {"prevX", prevX},
-                {"prevY", prevY},
-                {"color", color},
-                {"size", size},
-                {"isEraser", isEraser}
-              }
+            {
+                "payload", {
+                    {"x", x},
+                    {"y", y},
+                    {"prevX", prevX},
+                    {"prevY", prevY},
+                    {"color", color},
+                    {"size", size},
+                    {"isEraser", isEraser}
+                }
+            }
+        };
+    }
+
+    inline json makeEndRound(const std::vector<Player> &players, std::string_view revealedWord) {
+        json playersArray = json::array();
+        for (const auto &p: players) {
+            playersArray.push_back({
+                {"nickname", p.getNick()},
+                {"points", p.getPoints()}
+            });
+        }
+
+        return {
+            {"type", "ROUND_END"},
+            {
+                "payload", {
+                    {
+                        "leaderboard", {
+
+                        }
+                    }
+
+                }
             }
         };
     }

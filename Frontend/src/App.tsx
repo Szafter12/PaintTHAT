@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createRoomRequest } from './api/roomsApi';
 import { useGameSocket } from './hooks/useGameSocket';
+import { PlayerDrawView } from './views/PlayerDrawView';
 import type {
   AppView,
   GameSettings,
@@ -8,6 +9,7 @@ import type {
   PlayerInfo,
   PlayerSession,
   UserRole,
+  ChatMessage
 } from './types/game';
 import { MenuView } from './views/MenuView';
 import { HostLobbyView } from './views/HostLobbyView';
@@ -23,6 +25,58 @@ export function App() {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [connectedPlayers, setConnectedPlayers] = useState<PlayerInfo[]>([]);
+  const [currentDrawer, setCurrentDrawer] = useState<string | null>(null);
+  const [wordOptions, setWordOptions] = useState<string[]>([]);
+  const [roundTimeLeft, setRoundTimeLeft] = useState<number>(0);
+  const [isRoundActive, setIsRoundActive] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    const handleChooseWord = (e: any) => {
+      setCurrentDrawer(playerData?.nickname || 'Ja'); 
+      setWordOptions(e.detail || []); 
+      setIsRoundActive(false); 
+      // RESET RUNDY (Czyścimy czat i status odgadnięcia przy nowym słowie)
+      setChatMessages([]);
+      setConnectedPlayers(prev => prev.map(p => ({ ...p, isGuessed: false })));
+    };
+
+    const handleWaitingForWord = (e: any) => {
+      setCurrentDrawer(e.detail);
+      setWordOptions([]);
+      setIsRoundActive(false);
+      // RESET RUNDY
+      setChatMessages([]);
+      setConnectedPlayers(prev => prev.map(p => ({ ...p, isGuessed: false })));
+    };
+
+    const handleTimeLeft = (e: any) => {
+      setRoundTimeLeft(e.detail);
+      setIsRoundActive(true);
+    };
+
+    // Obsługa nietrafionych haseł
+    const handleGuessMiss = (e: any) => {
+      setChatMessages(prev => [...prev, { id: Date.now(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'miss' }]);
+    };
+    const handleGuessAlmost = (e: any) => {
+      setChatMessages(prev => [...prev, { id: Date.now(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'almost' }]);
+    };
+
+    window.addEventListener('choose-word', handleChooseWord);
+    window.addEventListener('waiting-for-word', handleWaitingForWord);
+    window.addEventListener('time-left', handleTimeLeft);
+    window.addEventListener('guess-miss', handleGuessMiss);
+    window.addEventListener('guess-almost', handleGuessAlmost);
+
+    return () => {
+      window.removeEventListener('choose-word', handleChooseWord);
+      window.removeEventListener('waiting-for-word', handleWaitingForWord);
+      window.removeEventListener('time-left', handleTimeLeft);
+      window.removeEventListener('guess-miss', handleGuessMiss);
+      window.removeEventListener('guess-almost', handleGuessAlmost);
+    };
+  }, [playerData?.nickname]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -67,6 +121,7 @@ export function App() {
           : p
       )
     );
+    setChatMessages((prev) => [...prev, { id: Date.now(), nickname, text: 'Odgadł(a) hasło!', type: 'correct' }]);
   }, []);
 
   const { sendPacket, closeSocket } = useGameSocket({
@@ -109,6 +164,8 @@ export function App() {
     setConnectedPlayers([]);
     setCurrentView('menu');
   };
+
+  const hasLocalPlayerGuessed = connectedPlayers.find(p => p.nickname === playerData?.nickname)?.isGuessed || false;
 
   return (
     <>
@@ -158,13 +215,29 @@ export function App() {
       )}
 
       {currentView === 'playerGuess' && playerData && roomCode && (
-        <PlayerGuessView
-          roomCode={roomCode}
-          nickname={playerData.nickname}
-          avatar={playerData.avatar}
-          sendPacket={sendPacket}
-          onLeave={handleLeaveRoom}
-        />
+        !currentDrawer ? (
+
+          <div className="menu" style={{ textAlign: 'center', padding: '40px' }}>
+            <h2>Ładowanie rundy...</h2>
+            <p style={{ color: '#aaa', fontSize: '20px', marginTop: '15px' }}>
+              Maszyna losująca wybiera rysownika...
+            </p>
+          </div>
+        ) : currentDrawer === playerData.nickname ? (
+          <PlayerDrawView
+            nickname={playerData.nickname}
+            wordOptions={wordOptions}
+            isRoundActive={isRoundActive}
+            sendPacket={sendPacket}
+          />
+        ) : (
+          <PlayerGuessView
+            currentDrawer={currentDrawer}
+            isRoundActive={isRoundActive}
+            hasGuessed={hasLocalPlayerGuessed}
+            sendPacket={sendPacket}
+          />
+        )
       )}
 
       {currentView === 'hostGame' && hostData && roomCode && (
@@ -173,6 +246,10 @@ export function App() {
           nickname={hostData.username}
           avatar={hostData.avatar}
           players={connectedPlayers}
+          currentDrawer={currentDrawer}
+          isRoundActive={isRoundActive}
+          timeLeft={roundTimeLeft}
+          chatMessages={chatMessages}
           sendPacket={sendPacket}
           onLeave={handleLeaveRoom}
         />

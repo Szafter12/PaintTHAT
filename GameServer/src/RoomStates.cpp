@@ -30,6 +30,7 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
         }
 
         room.prepareNewRoundQueue();
+        room.broadcastAll(Packet::makeGameStarted());
         room.changeState(std::make_unique<RoundStartState>());
     }
 }
@@ -85,7 +86,9 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             case Guessing::Guessed: {
                 int pointsForGuesser = room.addPointsToPlayers(&conn);
                 room.addToGuessQueue(&conn);
-                room.broadcastAll(Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser, room.getPlayerByConn(&conn)->getPoints()));
+                room.broadcastAll(
+                    Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser,
+                                                       room.getPlayerByConn(&conn)->getPoints()));
 
                 if (room.isAllGuessed()) {
                     room.stopCountdown();
@@ -107,16 +110,8 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
-    } else if (type == "DRAW_STROKE" && &conn == room.getCurrentDrawer()->getConn()) {
-        int x = packet.at("payload").at("x");
-        int y = packet.at("payload").at("y");
-        int prevX = packet.at("payload").at("prevX");
-        int prevY = packet.at("payload").at("prevY");
-        std::string color = packet.at("payload").at("color");
-        int size = packet.at("payload").at("size");
-        bool isEraser = packet.at("payload").at("isEraser");
-
-        room.sendJson(room.getHostConn(), Packet::makeDrawerSendStrokeToHost(x,y,prevX,prevY,color,size,isEraser));
+    } else if (type == "DRAW_BROADCAST" && &conn == room.getCurrentDrawer()->getConn()) {
+        room.getHostConn()->send_text(packet.dump());
     }
 }
 
@@ -131,19 +126,37 @@ void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn)
 }
 
 void RoundEndState::onEnter(Room &room) {
-
     if (room.getCurrentRound() == room.getMaxRounds()) {
         room.changeState(std::make_unique<EndGameState>());
     } else {
-        room.changeState(std::make_unique<RoundStartState>());
+        /*
+         * TODO
+         * - send round summary
+         */
     }
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+    std::string type = packet.at("type");
+
+    if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
+        /*
+         * TODO
+         * - Implement packet on next round
+         */
+    }
 }
 
 void EndGameState::onEnter(Room &room) {
+    /*
+        * TODO
+        * - Send Game summary
+    */
 }
 
 void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
+    /*
+        * TODO
+        * - Wait for host to go back to lobby
+    */
 }
