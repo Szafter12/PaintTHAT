@@ -43,6 +43,32 @@ namespace WebApi.Migrations
                     b.ToTable("Games");
                 });
 
+            modelBuilder.Entity("WebApi.Models.HostUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("HostUsers");
+                });
+
             modelBuilder.Entity("WebApi.Models.RoundRecord", b =>
                 {
                     b.Property<Guid>("Id")
