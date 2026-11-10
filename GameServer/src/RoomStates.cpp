@@ -17,11 +17,6 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 
         json packetToSend = Packet::makeLobbyUpdate(room.getPin(), room.getPlayers());
         room.broadcastAll(packetToSend);
-    } else if (type == "LOBBY_UPDATE" && &conn == room.getHostConn()) {
-        /*
-         * TODO
-         * - LOBBY_UPDATE from client (rounds count, time etc.)
-         */
     } else if (type == "START_GAME" && &conn == room.getHostConn()) {
         if (room.getPlayersCount() < 2) {
             conn.send_text(
@@ -29,6 +24,7 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
             return;
         }
 
+        room.setupRoom(packet);
         room.prepareNewRoundQueue();
         room.broadcastAll(Packet::makeGameStarted());
         room.changeState(std::make_unique<RoundStartState>());
@@ -60,12 +56,7 @@ void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn
     if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
 
-        /*
-         *TODO
-         * - Add security check is word is from 3 words pool
-         */
-        if (!guessWord.empty()) {
-            room.setGuessingWord(guessWord);
+        if (room.selectWordFromChoices(guessWord)) {
             room.changeState(std::make_unique<WhileRoundState>());
         }
     }

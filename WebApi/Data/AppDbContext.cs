@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<GameSession> Games => Set<GameSession>();
     public DbSet<RoundRecord> Rounds => Set<RoundRecord>();
+    public DbSet<Word> Words { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

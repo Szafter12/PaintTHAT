@@ -30,6 +30,17 @@ void Room::onClose(crow::websocket::connection &conn) {
     this->currentState->handleClose(*this, conn);
 }
 
+void Room::setupRoom(const json &packet) {
+    const auto &payload = packet.at("payload");
+
+    int maxRounds_p = payload.at("maxRounds").get<int>();
+    int roundTime_p = payload.at("roundTime").get<int>();
+
+    this->maxRounds = std::max(1, maxRounds_p);
+    this->roundTime = std::max(10, roundTime_p);
+    this->initWordPool(payload.at("words").get<std::vector<std::string> >());
+}
+
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
     this->players.emplace_back(std::string(playerName), conn);
 }
@@ -172,8 +183,8 @@ int Room::addPointsToPlayers(const crow::websocket::connection *conn) {
 
     int pointsForDrawer = 50;
 
-    Player* guesser = this->getPlayerByConn(conn);
-    Player* drawer = this->getCurrentDrawer();
+    Player *guesser = this->getPlayerByConn(conn);
+    Player *drawer = this->getCurrentDrawer();
 
     if (guesser) guesser->addPoints(pointsForGuesser);
     if (drawer) drawer->addPoints(pointsForDrawer);
@@ -194,9 +205,9 @@ void Room::broadcastExcept(const crow::websocket::connection *conn, const json &
     }
 }
 
-void Room::initWordPool(const std::vector<std::string> &words) {
+void Room::initWordPool(std::vector<std::string> words) {
     this->backupWordsPool = words;
-    this->wordsPool = words;
+    this->wordsPool = std::move(words);
     std::ranges::shuffle(this->wordsPool, getRng());
 }
 
@@ -238,21 +249,18 @@ const std::vector<std::string> &Room::drawThreeWordsFromPool() {
 }
 
 bool Room::selectWordFromChoices(const std::string &chosenWord) {
-    auto it = std::ranges::find(this->currentWordsChoices, chosenWord);
-    if (it == this->currentWordsChoices.end()) {
+    if (const auto it = std::ranges::find(this->currentWordsChoices, chosenWord); it == this->currentWordsChoices.end()) {
         return false;
     }
 
     this->guessingWord = chosenWord;
 
-    /* If we want in the future 2 other words back in pool
-    for (const auto& word : currentWordChoices) {
+    for (const auto& word : this->currentWordsChoices) {
         if (word != chosenWord) {
-            wordPool.push_back(word);
+            this->wordsPool.push_back(word);
         }
     }
-    std::shuffle(wordPool.begin(), wordPool.end(), getRng());
-    */
+    std::ranges::shuffle(this->wordsPool, getRng());
 
     this->currentWordsChoices.clear();
     return true;
@@ -272,6 +280,10 @@ int Room::getTimeLeft() const {
 
 size_t Room::getGuessedPlayersCount() const {
     return this->guessedQueue.size();
+}
+
+const std::vector<std::string> &Room::getCurrentWordsChoices() const {
+    return this->currentWordsChoices;
 }
 
 void Room::startCountdown(int seconds) {
