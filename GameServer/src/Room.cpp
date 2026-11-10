@@ -30,6 +30,31 @@ void Room::onClose(crow::websocket::connection &conn) {
     this->currentState->handleClose(*this, conn);
 }
 
+void Room::setupRoom(const json &packet) {
+    const auto &payload = packet.at("payload");
+
+    int maxRounds_p = payload.at("maxRounds").get<int>();
+    int roundTime_p = payload.at("roundTime").get<int>();
+    std::vector<std::string> customWords = payload.at("customWords").get<std::vector<std::string>>();
+
+    /*
+     * TODO
+     * - Implement get words from database
+    */
+
+    if (maxRounds_p < 1) {
+        this->maxRounds = 1;
+    } else {
+        this->maxRounds = maxRounds_p;
+    }
+
+    if (roundTime_p < 10) {
+        this->roundTime = 10;
+    } else {
+        this->roundTime = roundTime_p;
+    }
+}
+
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
     this->players.emplace_back(std::string(playerName), conn);
 }
@@ -272,6 +297,10 @@ int Room::getTimeLeft() const {
 
 size_t Room::getGuessedPlayersCount() const {
     return this->guessedQueue.size();
+}
+
+const std::vector<std::string> &Room::getCurrentWordsChoices() const {
+    return this->currentWordsChoices;
 }
 
 void Room::startCountdown(int seconds) {
