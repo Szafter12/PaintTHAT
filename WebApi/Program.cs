@@ -24,8 +24,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString));
 
-// 3. Register the GameService for dependency injection
+// 3. Register services for dependency injection
 builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<IWordsService, WordsService>();
 
 // 4. Configuration for CORS to allow requests from React frontend
 builder.Services.AddCors(options =>

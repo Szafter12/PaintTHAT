@@ -67,7 +67,6 @@ public:
 
     void addToGuessQueue(const crow::websocket::connection *conn);
 
-    void initWordPool(const std::vector<std::string> &words);
     void nextRound();
 
     // Getters
@@ -135,6 +134,7 @@ private:
     std::condition_variable_any timerCv;
     std::atomic<int> timeLeft{0};
 
+    void initWordPool(std::vector<std::string> words);
     void roundCountdownWorker(const std::stop_token &stoken, int seconds);
 };
 

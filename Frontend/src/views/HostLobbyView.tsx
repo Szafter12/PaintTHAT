@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import type { GameSettings, PlayerInfo } from '../types/game'; // <-- DODANE 'type'
+import type { GameSettings, PlayerInfo } from '../types/game';
+import type { SendPacketFn } from '../types/websocket';
 import '../styles/host.css';
 
 interface HostLobbyViewProps {
+  sendPacket: SendPacketFn;
   username: string;
   selectedAvatar: string;
   players: PlayerInfo[];

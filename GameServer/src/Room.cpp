@@ -35,24 +35,10 @@ void Room::setupRoom(const json &packet) {
 
     int maxRounds_p = payload.at("maxRounds").get<int>();
     int roundTime_p = payload.at("roundTime").get<int>();
-    std::vector<std::string> customWords = payload.at("customWords").get<std::vector<std::string>>();
 
-    /*
-     * TODO
-     * - Implement get words from database
-    */
-
-    if (maxRounds_p < 1) {
-        this->maxRounds = 1;
-    } else {
-        this->maxRounds = maxRounds_p;
-    }
-
-    if (roundTime_p < 10) {
-        this->roundTime = 10;
-    } else {
-        this->roundTime = roundTime_p;
-    }
+    this->maxRounds = std::max(1, maxRounds_p);
+    this->roundTime = std::max(10, roundTime_p);
+    this->initWordPool(payload.at("words").get<std::vector<std::string> >());
 }
 
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
@@ -197,8 +183,8 @@ int Room::addPointsToPlayers(const crow::websocket::connection *conn) {
 
     int pointsForDrawer = 50;
 
-    Player* guesser = this->getPlayerByConn(conn);
-    Player* drawer = this->getCurrentDrawer();
+    Player *guesser = this->getPlayerByConn(conn);
+    Player *drawer = this->getCurrentDrawer();
 
     if (guesser) guesser->addPoints(pointsForGuesser);
     if (drawer) drawer->addPoints(pointsForDrawer);
@@ -219,9 +205,9 @@ void Room::broadcastExcept(const crow::websocket::connection *conn, const json &
     }
 }
 
-void Room::initWordPool(const std::vector<std::string> &words) {
+void Room::initWordPool(std::vector<std::string> words) {
     this->backupWordsPool = words;
-    this->wordsPool = words;
+    this->wordsPool = std::move(words);
     std::ranges::shuffle(this->wordsPool, getRng());
 }
 

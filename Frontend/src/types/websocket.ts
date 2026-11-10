@@ -3,7 +3,7 @@ import type { PlayerInfo } from './game';
 export interface ClientPacketMap {
   HOST_INIT: Record<string, never>;
   PLAYER_JOIN: { nickname: string; avatar: string };
-  START_GAME: { maxRounds: number; roundTime: number; customWords: string[] };
+  START_GAME: { maxRounds: number; roundTime: number; words: string[] };
   
 
   PICKED_WORD: { guessWord: string }; 
@@ -32,7 +32,7 @@ export type ServerPacket =
   | { type: 'CHOOSE_WORD'; payload: { words: string[] } }
   | { type: 'GAME_STARTED'; payload: Record<string, never> }
   | { type: 'WAITING_FOR_WORD'; payload: { drawer: string } }
-  | { type: 'TIME_LEFT'; payload: { time: number } } // u Ciebie to "time", nie "seconds"
+  | { type: 'TIME_LEFT'; payload: { time: number } }
   | { type: 'LOBBY_INITIATED'; payload: { maxRounds: number; roundTime: number } }
   | { type: 'PLAYER_GUESSED_CORRECTLY'; payload: { nickname: string; pointAwarded: number; totalPoints: number } }
   | { type: 'PLAYER_GUESSED_MISS'; payload: { nickname: string; guessWord: string } }

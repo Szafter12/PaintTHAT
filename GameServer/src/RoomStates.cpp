@@ -58,16 +58,9 @@ void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn
 
     if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
-        bool isCorrectWord {true};
+        const auto &choices = room.getCurrentWordsChoices();
 
-        for (const std::string &word : room.getCurrentWordsChoices()) {
-            if (guessWord != word) {
-                isCorrectWord = false;
-                break;
-            }
-        }
-
-        if (!guessWord.empty() && isCorrectWord) {
+        if (!guessWord.empty() && std::ranges::find(choices, guessWord) != choices.end()) {
             room.setGuessingWord(guessWord);
             room.changeState(std::make_unique<WhileRoundState>());
         }

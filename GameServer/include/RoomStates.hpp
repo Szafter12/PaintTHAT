@@ -1,6 +1,7 @@
 #ifndef GAMESERVER_ROOMSTATES_HPP
 #define GAMESERVER_ROOMSTATES_HPP
 #include "IRoomState.hpp"
+#include <algorithm>
 
 class LobbyState : public IRoomState {
 public:
