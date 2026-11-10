@@ -11,9 +11,6 @@
 #include "RoomStates.hpp"
 #include "Helper.hpp"
 
-#define MOCK_WORDS "pies", "kot", "ryba", "ptak", "drzewo", "kwiat", "słońce", "księżyc", "chmura", "dom", "okno", "drzwi", "krzesło", "stół", "łóżko", "lampa", "książka", "auto", "rower", "statek", "samolot", "pociąg", "jabłko", "banan", "pizza", "ser", "chleb", "woda", "kawa", "herbata", "buty", "spodnie", "czapka", "zegarek", "klucz", "telefon", "komputer", "myszka", "gitara", "bęben", "szkoła", "zamek", "plaża", "góry", "las", "ogień", "woda", "ziemia", "wiatr", "król", "królowa", "rycerz", "smok", "pirat", "duch", "wampir", "robot", "kosmonauta", "obcy", "ninja", "kucharz", "lekarz", "policjant", "strażak", "fryzjer", "malarz", "piłka", "bramka", "rower", "narty", "basen", "złoto", "srebro", "diament", "pieniądze", "portfel", "torba", "plecak", "walizka", "szczoteczka", "mydło", "lustro", "ręcznik", "grzebień", "nożyczki", "ołówek", "długopis", "gumka", "zeszyt", "linijka", "pudełko", "prezent", "balon", "tort", "świeczka", "flaga", "mapa", "kompas", "lornetka"
-
-
 enum class Guessing {
     Guessed,
     Miss,
@@ -29,6 +26,7 @@ public:
     void changeState(std::unique_ptr<IRoomState> newState);
 
     void onPacket(crow::websocket::connection &conn, const json &packet);
+
     void onClose(crow::websocket::connection &conn);
 
     // Handling room
@@ -116,8 +114,8 @@ private:
     std::vector<size_t> guessedQueue;
 
     // Words
-    std::vector<std::string> wordsPool{MOCK_WORDS};
-    std::vector<std::string> backupWordsPool{MOCK_WORDS};
+    std::vector<std::string> wordsPool;
+    std::vector<std::string> backupWordsPool;
     std::vector<std::string> currentWordsChoices;
     std::string guessingWord;
 
@@ -135,6 +133,7 @@ private:
     std::atomic<int> timeLeft{0};
 
     void initWordPool(std::vector<std::string> words);
+
     void roundCountdownWorker(const std::stop_token &stoken, int seconds);
 };
 

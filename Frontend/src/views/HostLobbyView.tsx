@@ -10,7 +10,7 @@ interface HostLobbyViewProps {
   selectedAvatar: string;
   players: PlayerInfo[];
   roomCode: string;
-  onStartGame: (settings: GameSettings) => void;
+  onStartGame: (settings: GameSettings | any) => void;
   onLogout: () => void;
 }
 
@@ -27,6 +27,8 @@ export function HostLobbyView({
 
   const [maxRounds, setMaxRounds] = useState<number>(3);
   const [roundTime, setRoundTime] = useState<number>(60);
+  
+  const [isStarting, setIsStarting] = useState<boolean>(false);
 
   const handleAddWord = () => {
     const trimmed = wordInput.trim();
@@ -42,12 +44,43 @@ export function HostLobbyView({
     }
   };
 
-  const handleStartGameClick = () => {
-    onStartGame({
-      maxRounds,
-      roundTime,
-      customWords,
-    });
+  const handleStartGameClick = async () => {
+    setIsStarting(true);
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5098/api';
+      const response = await fetch(`${API_URL}/words/random?count=15`);
+      
+      if (!response.ok) {
+        throw new Error('Błąd pobierania z bazy danych');
+      }
+      
+      const dbWords: string[] = await response.json();
+
+      const finalWords = [...customWords, ...dbWords];
+      
+      finalWords.sort(() => Math.random() - 0.5);
+
+      onStartGame({
+        maxRounds,
+        roundTime,
+        words: finalWords,
+      });
+
+    } catch (error) {
+      console.error("Nie udało się pobrać słów. Start z zestawem awaryjnym:", error);
+      
+      const fallbackWords = [...customWords, "Pies", "Kot", "Drzewo", "Auto", "Dom", "Programista"];
+      fallbackWords.sort(() => Math.random() - 0.5);
+
+      onStartGame({
+        maxRounds,
+        roundTime,
+        words: fallbackWords,
+      });
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   return (
@@ -114,7 +147,7 @@ export function HostLobbyView({
           </div>
           <ul style={{ listStyleType: 'none', padding: 0, marginTop: '10px', color: 'white' }}>
             {customWords.map((word, idx) => (
-              <li key={idx}>- {word}</li>
+              <li key={idx}>{word}</li>
             ))}
           </ul>
         </div>
@@ -158,8 +191,9 @@ export function HostLobbyView({
             id="join-lobby-btn"
             style={{ marginTop: '20px' }}
             onClick={handleStartGameClick}
-            disabled={players.length === 0}
+            disabled={players.length === 0 || isStarting}
           >
+            {isStarting ? 'Ładowanie słów...' : ''}
           </button>
         </div>
       </main>

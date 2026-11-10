@@ -249,21 +249,18 @@ const std::vector<std::string> &Room::drawThreeWordsFromPool() {
 }
 
 bool Room::selectWordFromChoices(const std::string &chosenWord) {
-    auto it = std::ranges::find(this->currentWordsChoices, chosenWord);
-    if (it == this->currentWordsChoices.end()) {
+    if (const auto it = std::ranges::find(this->currentWordsChoices, chosenWord); it == this->currentWordsChoices.end()) {
         return false;
     }
 
     this->guessingWord = chosenWord;
 
-    /* If we want in the future 2 other words back in pool
-    for (const auto& word : currentWordChoices) {
+    for (const auto& word : this->currentWordsChoices) {
         if (word != chosenWord) {
-            wordPool.push_back(word);
+            this->wordsPool.push_back(word);
         }
     }
-    std::shuffle(wordPool.begin(), wordPool.end(), getRng());
-    */
+    std::ranges::shuffle(this->wordsPool, getRng());
 
     this->currentWordsChoices.clear();
     return true;

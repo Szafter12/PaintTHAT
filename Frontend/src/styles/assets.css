@@ -8,16 +8,13 @@
   --host-hover-img: url('../assets/images/HOST1.gif');
   --player-img: url('../assets/images/PLAYER0.gif');
   --player-hover-img: url('../assets/images/PLAYER1.gif');
-  --left-avatar-img: url('../assets/images/LEFT0.gif');
-  --left-avatar-hover-img: url('../assets/images/LEFT1.gif');
-  --right-avatar-img: url('../assets/images/RIGHT0.gif');
-  --right-avatar-hover-img: url('../assets/images/RIGHT1.gif');
+  --left-avatar-img: url('../assets/images/left0.gif');
+  --left-avatar-hover-img: url('../assets/images/left1.gif');
+  --right-avatar-img: url('../assets/images/right0.gif');
+  --right-avatar-hover-img: url('../assets/images/right1.gif');
   --signin-img: url('../assets/images/signin0.gif');
   --signin-hover-img: url('../assets/images/signin1.gif');
   --signup-img: url('../assets/images/signup0.gif');
   --signup-hover-img: url('../assets/images/signup1.gif');
   --border-img: url('../assets/images/BORDER.gif');
-  
-
-
 }

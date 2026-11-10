@@ -23,7 +23,7 @@ export interface PlayerSession {
 export interface GameSettings {
   maxRounds: number;
   roundTime: number;
-  customWords: string[];
+  words: string[];
 }
 
 export interface ChatMessage {

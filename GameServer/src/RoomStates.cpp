@@ -23,11 +23,8 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
                 Packet::makeError("NOT_ENOUGH_PLAYERS", "Potrzeba minimum 2 graczy, aby rozpoczac gre").dump());
             return;
         }
-        /*
-         * TODO
-         * - finish implement setupRoom
-         */
-        //room.setupRoom(packet);
+
+        room.setupRoom(packet);
         room.prepareNewRoundQueue();
         room.broadcastAll(Packet::makeGameStarted());
         room.changeState(std::make_unique<RoundStartState>());
@@ -58,10 +55,8 @@ void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn
 
     if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
-        const auto &choices = room.getCurrentWordsChoices();
 
-        if (!guessWord.empty() && std::ranges::find(choices, guessWord) != choices.end()) {
-            room.setGuessingWord(guessWord);
+        if (room.selectWordFromChoices(guessWord)) {
             room.changeState(std::make_unique<WhileRoundState>());
         }
     }

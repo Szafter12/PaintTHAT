@@ -183,6 +183,7 @@ export function App() {
 
       {currentView === 'host' && hostData && roomCode && (
         <HostLobbyView
+          sendPacket={sendPacket}
           username={hostData.username}
           selectedAvatar={hostData.avatar}
           players={connectedPlayers}
