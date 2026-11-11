@@ -31,6 +31,12 @@ public:
 
     void resetCurrentRoundPoints();
 
+    void resetConn();
+
+    void resetPoints();
+
+    void setConn(crow::websocket::connection &connection);
+
 private:
     std::string nickname{"No name"};
     int points{0};

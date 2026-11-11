@@ -120,10 +120,8 @@ void RoundEndState::onEnter(Room &room) {
     if (room.getCurrentRound() == room.getMaxRounds()) {
         room.changeState(std::make_unique<EndGameState>());
     } else {
-        /*
-         * TODO
-         * - send round summary
-         */
+        room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
+        std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
     }
 }
 
@@ -131,23 +129,29 @@ void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, 
     std::string type = packet.at("type");
 
     if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
-        /*
-         * TODO
-         * - Implement packet on next round
-         */
+        room.changeState(std::make_unique<RoundStartState>());
     }
 }
 
 void EndGameState::onEnter(Room &room) {
-    /*
-        * TODO
-        * - Send Game summary
-    */
+    room.broadcastAll(Packet::makeGameSummary(room.getPlayers()));
 }
 
 void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
-    /*
-        * TODO
-        * - Wait for host to go back to lobby
-    */
+    if (const std::string &type = packet.at("type").get<std::string>(); type == "BACK_TO_LOBBY") {
+        if (!room.getHostConn() || room.getHostConn() != &conn) {
+            return;
+        }
+
+        for (auto &player: room.getPlayers()) {
+            player.resetPoints();
+            player.resetCurrentRoundPoints();
+        }
+
+        room.broadcastAll(Packet::makeBackToLobby());
+
+        room.broadcastAll(Packet::makeLobbyUpdate(room.getPin(), room.getPlayers()));
+
+        room.changeState(std::make_unique<LobbyState>());
+    }
 }
