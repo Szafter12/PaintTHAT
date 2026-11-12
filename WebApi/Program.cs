@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using WebApi.Data;
 using WebApi.Services;
-
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 /*
 - TODO
 - Rejestracja hosta (email, haslo, haslo_powtorzenie, create_at, is_active, )
@@ -29,6 +31,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!))
+        };
+    });
+
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowReact", policy =>
     {
@@ -50,6 +67,7 @@ Directory.CreateDirectory(drawingsPath);
 
 app.UseStaticFiles();
 app.UseCors("AllowReact");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

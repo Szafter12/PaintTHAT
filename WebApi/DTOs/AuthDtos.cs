@@ -13,6 +13,15 @@ public class RegisterHostRequestDto
     public string Password { get; set; } = string.Empty;
 
     [Required]
-    [Compare("Password", ErrorMessage = "Hasła muszą być identyczne!")]
+    [Compare("Password", ErrorMessage = "Hasła muszą być identyczne")]
     public string PasswordRepeat { get; set; } = string.Empty;
+}
+public class LoginHostRequestDto
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
 }
