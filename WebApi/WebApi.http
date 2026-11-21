@@ -3,6 +3,14 @@
 POST {{Address}}/api/rooms/create
 Content-Type: application/json
 
+POST {{Address}}/api/auth/register
+Content-Type: application/json
+
+{
+    "Email": "Essa@essa.com",
+    "Password": "Skibidka1234."
+    "PasswordRepeate": "Skibidka1234."
+}
 
 
 ###

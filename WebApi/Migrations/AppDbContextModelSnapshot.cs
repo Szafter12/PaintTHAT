@@ -69,6 +69,42 @@ namespace WebApi.Migrations
                     b.ToTable("HostUsers");
                 });
 
+            modelBuilder.Entity("WebApi.Models.Room", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("HostUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("HostUserId1")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HostUsername")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Pin")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HostUserId1");
+
+                    b.ToTable("Rooms");
+                });
+
             modelBuilder.Entity("WebApi.Models.RoundRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -98,6 +134,15 @@ namespace WebApi.Migrations
                     b.HasIndex("GameSessionId");
 
                     b.ToTable("Rounds");
+                });
+
+            modelBuilder.Entity("WebApi.Models.Room", b =>
+                {
+                    b.HasOne("WebApi.Models.HostUser", "HostUser")
+                        .WithMany()
+                        .HasForeignKey("HostUserId1");
+
+                    b.Navigation("HostUser");
                 });
 
             modelBuilder.Entity("WebApi.Models.RoundRecord", b =>
