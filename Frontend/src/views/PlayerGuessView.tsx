@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { SendPacketFn } from '../types/websocket';
+import '../styles/menu.css';
+import '../styles/game.css';
 
 interface PlayerGuessViewProps {
   currentDrawer: string;
@@ -26,21 +28,21 @@ export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, send
 
   if (!isRoundActive) {
     return (
-      <div className="menu" style={{ textAlign: 'center', padding: '40px' }}>
+      <div className="menu player-screen">
         <h2>Zaraz zaczynamy!</h2>
-        <p style={{ fontSize: '24px', color: '#ff0055', margin: '20px 0' }}>
+        <p className="drawer-name">
           {currentDrawer} wybiera słowo...
         </p>
       </div>
     );
   }
 
-  // NOWE: Ekran sukcesu!
+  // Ekran sukcesu
   if (hasGuessed) {
     return (
-      <div className="menu" style={{ textAlign: 'center', padding: '40px', backgroundColor: 'rgba(0, 255, 0, 0.1)' }}>
-        <h2 style={{ color: '#00ff00', fontSize: '36px', marginBottom: '20px' }}>Brawo!</h2>
-        <p style={{ fontSize: '22px', color: 'white' }}>
+      <div className="menu player-screen guess-success">
+        <h2 className="success-title">Brawo!</h2>
+        <p className="success-text">
           Odgadłeś hasło. Oczekiwanie na koniec rundy...
         </p>
       </div>
@@ -48,14 +50,15 @@ export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, send
   }
 
   return (
-    <div className="menu" style={{ textAlign: 'center', padding: '40px' }}>
-      <h3 style={{ color: '#aaa', marginBottom: '20px' }}>Obecnie rysuje: {currentDrawer}</h3>
+    <div className="menu player-screen">
+      <h3 className="muted">Obecnie rysuje: {currentDrawer}</h3>
       
       <div className="control-group">
-        <label>Zgadnij hasło:</label>
+        <label htmlFor="guess-input">Zgadnij hasło:</label>
         <input 
+          id="guess-input"
           type="text" 
-          className="game-input" 
+          className="game-input wide" 
           placeholder="Wpisz hasło..." 
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
@@ -64,8 +67,7 @@ export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, send
         />
       </div>
       <button 
-        className="start-button" 
-        style={{ marginTop: '20px' }} 
+        className="start-button guess-submit" 
         onClick={submitGuess}
       ></button>
     </div>

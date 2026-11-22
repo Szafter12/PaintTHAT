@@ -1,4 +1,4 @@
-export type AppView = 'menu' | 'host' | 'player' | 'playerRoom' | 'playerGuess' | 'hostGame';
+export type AppView = 'menu' | 'host' | 'player' | 'playerRoom' | 'playerGuess' | 'hostGame' | 'hostResults';
 
 export type UserRole = 'host' | 'player';
 
@@ -24,6 +24,8 @@ export interface GameSettings {
   maxRounds: number;
   roundTime: number;
   words: string[];
+  /** Tylko dla frontendu (zapamiętanie ustawień po grze) – nie jest wysyłane do serwera. */
+  customWords?: string[];
 }
 
 export interface ChatMessage {

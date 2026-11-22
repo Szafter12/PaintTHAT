@@ -11,6 +11,7 @@ export interface ClientPacketMap {
   SUBMIT_GUESS: { guess: string };
   DRAW_BROADCAST: { x: number; y: number; prevX: number; prevY: number; color: string; size: number; isEraser: boolean };
   CLEAR_CANVAS: Record<string, never>;
+  KICK_PLAYER: { nickname: string };
 }
 
 export type ClientPacketType = keyof ClientPacketMap;
@@ -39,4 +40,8 @@ export type ServerPacket =
   | { type: 'PLAYER_GUESSED_ALMOST'; payload: { nickname: string; guessWord: string } }
   | { type: 'DRAWER_QUIT'; payload: { nickname: string } }
   | { type: 'DRAW_BROADCAST'; payload: ClientPacketMap['DRAW_BROADCAST'] }
-  | { type: 'ROUND_END'; payload: { leaderboard: any } };
+  | { type: 'CLEAR_CANVAS'; payload: Record<string, never> }
+  | { type: 'ROUND_END'; payload: { leaderboard: any } }
+  | { type: 'KICKED'; payload: { reason?: string } }
+  | { type: 'GAME_OVER'; payload: { leaderboard?: any } }
+  | { type: 'GAME_ENDED'; payload: { leaderboard?: any } };

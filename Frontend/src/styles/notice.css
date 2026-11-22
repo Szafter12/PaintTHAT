@@ -1,0 +1,103 @@
+/* =========================================================
+   notice.css – okno komunikatów (zamiast alert())
+   Ramka: --border-img, czcionka: Indie Flower (tekst.css)
+
+   GRAFIKA OSTRZEŻENIA (gdy już ją zrobisz):
+   w assets.css dodaj
+       --notice-img: url('../assets/images/NOTICE.gif');
+       --notice-icon-text: '';
+   Dopóki tego nie ma, w miejscu grafiki widać duży znak „!”.
+   ========================================================= */
+
+.notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.75);
+  animation: notice-fade 0.15s ease-out;
+}
+
+.notice-box {
+  --notice-color: var(--accent, #ff0055);
+
+  width: 100%;
+  max-width: 560px;
+  padding: 30px 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+
+  border: 10px solid transparent;
+  border-image-source: var(--border-img);
+  border-image-slice: 30;
+  border-image-repeat: stretch;
+  background-color: #000;
+  color: #fff;
+  box-sizing: border-box;
+
+  animation: notice-pop 0.18s ease-out;
+}
+
+.notice-box.error   { --notice-color: var(--accent, #ff0055); }
+.notice-box.info    { --notice-color: var(--accent-warn, #ffcc00); }
+.notice-box.success { --notice-color: var(--accent-ok, #00ff00); }
+
+/* ---------- Miejsce na grafikę ---------- */
+.notice-icon {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: var(--notice-img, none);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.notice-icon::before {
+  content: var(--notice-icon-text, '!');
+  font-size: 90px;
+  line-height: 1;
+  color: var(--notice-color);
+}
+
+.notice-title {
+  font-size: 44px;
+  color: var(--notice-color);
+}
+
+.notice-message {
+  font-size: 28px;
+  color: #ddd;
+  overflow-wrap: anywhere;
+}
+
+.notice-ok {
+  margin-top: 10px;
+  min-width: 140px;
+}
+
+@keyframes notice-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes notice-pop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .notice-box { padding: 20px 14px 18px; }
+  .notice-icon { width: 90px; height: 90px; }
+  .notice-icon::before { font-size: 64px; }
+  .notice-title { font-size: 34px; }
+  .notice-message { font-size: 22px; }
+}

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { ASSETS } from '../assets';
+import '../styles/menu.css';
+import '../styles/game.css';
+import { showNotice } from '../hooks/notice';
 
 interface PlayerMenuViewProps {
   initialRoomCode: string;
@@ -25,11 +28,11 @@ export function PlayerMenuView({
 
   const handleStart = () => {
     if (!nickname.trim()) {
-      alert('Wpisz swój nick!');
+      showNotice('Wpisz swój nick!', { title: 'Brakuje nicku' });
       return;
     }
     if (!roomCode.trim()) {
-      alert('Wpisz numer pokoju!');
+      showNotice('Wpisz numer pokoju!', { title: 'Brakuje numeru pokoju' });
       return;
     }
 
@@ -76,7 +79,7 @@ export function PlayerMenuView({
         />
       </div>
 
-      <div className="menu-buttons" style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+      <div className="menu-buttons">
         <button className="return-button" onClick={onBack} />
         <button className="start-button" onClick={handleStart} />
       </div>
