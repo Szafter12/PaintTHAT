@@ -115,6 +115,10 @@ export function useGameSocket({
             window.dispatchEvent(new CustomEvent('drawer-quit', { detail: data.payload }));
             break;
 
+          case 'PLAYER_CLOSE':
+            window.dispatchEvent(new CustomEvent('player-close', { detail: data.payload }));
+            break;
+
           case 'KICKED':
             window.dispatchEvent(new CustomEvent('kicked', { detail: data.payload }));
             break;

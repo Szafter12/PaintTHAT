@@ -17,6 +17,11 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 
         json packetToSend = Packet::makeLobbyUpdate(room.getPin(), room.getPlayers());
         room.broadcastAll(packetToSend);
+    } else if (type == "KICK_PLAYER" && &conn == room.getHostConn()) {
+        std::string targetNick = packet.at("payload").at("nickname");
+        if (room.kickPlayer(targetNick)) {
+            room.broadcastAll(Packet::makeLobbyUpdate(room.getPin(), room.getPlayers()));
+        }
     } else if (type == "START_GAME" && &conn == room.getHostConn()) {
         if (room.getPlayersCount() < 2) {
             conn.send_text(
@@ -56,7 +61,7 @@ void RoundStartState::onEnter(Room &room) {
 void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
+    if (type == "PICKED_WORD" && room.getCurrentDrawer() && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
 
         if (room.selectWordFromChoices(guessWord)) {
@@ -72,22 +77,23 @@ void WhileRoundState::onEnter(Room &room) {
 void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    if (type == "SUBMIT_GUESS" && &conn != room.getCurrentDrawer()->getConn()) {
+    if (type == "SUBMIT_GUESS" && room.getCurrentDrawer() && &conn != room.getCurrentDrawer()->getConn()) {
+        Player *guesser = room.getPlayerByConn(&conn);
+        if (!guesser) return;
+
         std::string guessWord = packet.at("payload").at("guess");
-        std::string nickname = room.getPlayerByConn(&conn)->getNick();
+        std::string nickname = guesser->getNick();
 
         switch (room.checkGuess(guessWord)) {
             case Guessing::Guessed: {
                 int pointsForGuesser = room.addPointsToPlayers(&conn);
                 room.addToGuessQueue(&conn);
                 room.broadcastAll(
-                    Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser,
-                                                       room.getPlayerByConn(&conn)->getPoints()));
+                    Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser, guesser->getPoints()));
 
                 if (room.isAllGuessed()) {
                     room.stopCountdown();
                     room.changeState(std::make_unique<RoundEndState>());
-                    std::cout << "All guessed\n";
                 }
 
                 break;
@@ -115,16 +121,6 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
     }
 }
 
-// void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn) {
-//     Player *drawer = room.getCurrentDrawer();
-//
-//     if (drawer && drawer->getConn() == &conn) {
-//         room.stopCountdown();
-//         room.broadcastAll(Packet::makeDrawerQuitGame(drawer->getNick()));
-//         room.changeState(std::make_unique<RoundEndState>());
-//     }
-// }
-
 void RoundEndState::onEnter(Room &room) {
     room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
     std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
@@ -134,7 +130,7 @@ void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, 
     std::string type = packet.at("type");
 
     if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
-        if (room.getCurrentRound() > room.getMaxRounds()) {
+        if (room.getCurrentRound() >= room.getMaxRounds()) {
             room.changeState(std::make_unique<EndGameState>());
         } else {
             room.changeState(std::make_unique<RoundStartState>());
@@ -143,6 +139,7 @@ void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, 
 }
 
 void EndGameState::onEnter(Room &room) {
+    room.stopCountdown();
     room.broadcastAll(Packet::makeGameSummary(room.getPlayers()));
 }
 
@@ -155,12 +152,12 @@ void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, c
         for (auto &player: room.getPlayers()) {
             player.resetPoints();
             player.resetCurrentRoundPoints();
+            player.setIsGuessed(false);
+            player.setIsDrawer(false);
         }
 
         room.broadcastAll(Packet::makeBackToLobby());
-
         room.broadcastAll(Packet::makeLobbyUpdate(room.getPin(), room.getPlayers()));
-
         room.changeState(std::make_unique<LobbyState>());
     }
 }

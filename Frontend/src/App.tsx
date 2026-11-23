@@ -108,15 +108,26 @@ export function App() {
       });
     };
 
+    const handlePlayerClose = (e: Event) => {
+      const detail = (e as CustomEvent<{ playerNick?: string }>).detail;
+      if (!detail?.playerNick || detail.playerNick === playerNicknameRef.current) return;
+      showNotice(`Gracz ${detail.playerNick} opuścił pokój.`, {
+        title: 'Gracz wyszedł',
+        type: 'info',
+      });
+    };
+
     window.addEventListener('round-end', handleRoundEnd);
     window.addEventListener('game-over', handleGameOver);
     window.addEventListener('back-to-lobby', handleBackToLobbyEvent);
     window.addEventListener('drawer-quit', handleDrawerQuit);
+    window.addEventListener('player-close', handlePlayerClose);
     return () => {
       window.removeEventListener('round-end', handleRoundEnd);
       window.removeEventListener('game-over', handleGameOver);
       window.removeEventListener('back-to-lobby', handleBackToLobbyEvent);
       window.removeEventListener('drawer-quit', handleDrawerQuit);
+      window.removeEventListener('player-close', handlePlayerClose);
     };
   }, []);
 
@@ -262,6 +273,15 @@ export function App() {
     []
   );
 
+  const handleLeaveRoom = useCallback(() => {
+    closeSocket();
+    window.history.pushState({}, '', '/');
+    setRoomCode(null);
+    setUserRole(null);
+    setConnectedPlayers([]);
+    setCurrentView('menu');
+  }, []);
+
   const { sendPacket, closeSocket } = useGameSocket({
     roomCode,
     userRole,
@@ -270,7 +290,21 @@ export function App() {
     onGameStarted: handleGameStarted,
     onPlayerGuessed: handlePlayerGuessed,
     onRoomError: (code, message) => {
-      showNotice(message, { title: 'Odłączono' });
+      if (code === 'HOST_LEFT') {
+        closeSocket();
+        window.history.pushState({}, '', '/');
+        setRoomCode(null);
+        setUserRole(null);
+        setConnectedPlayers([]);
+        setCurrentView('menu');
+        showNotice(message, { title: 'Pokój zamknięty', type: 'info' });
+        return;
+      }
+
+      showNotice(message, {
+        title: code === 'NOT_ENOUGH_PLAYERS' ? 'Koniec gry' : 'Uwaga!',
+        type: code === 'NOT_ENOUGH_PLAYERS' ? 'info' : 'error',
+      });
       if (code === 'ROOM_NOT_FOUND' || code === 'ROOM_EXISTS') {
         closeSocket();
         setRoomCode(null);
@@ -321,15 +355,6 @@ export function App() {
     setCurrentView('host');
   };
 
-  const handleLeaveRoom = () => {
-    closeSocket();
-    window.history.pushState({}, '', '/');
-    setRoomCode(null);
-    setUserRole(null);
-    setConnectedPlayers([]);
-    setCurrentView('menu');
-  };
-
   const handleKickPlayer = (nickname: string) => {
     sendPacket('KICK_PLAYER', { nickname });
     setConnectedPlayers((prev) => prev.filter((p) => p.nickname !== nickname));
@@ -343,7 +368,7 @@ export function App() {
     };
     window.addEventListener('kicked', handleKicked);
     return () => window.removeEventListener('kicked', handleKicked);
-  }, []);
+  }, [handleLeaveRoom]);
 
   const hasLocalPlayerGuessed =
     connectedPlayers.find((p) => p.nickname === playerData?.nickname)?.isGuessed || false;

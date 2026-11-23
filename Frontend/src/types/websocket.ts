@@ -54,6 +54,7 @@ export type ServerPacket =
   | { type: 'PLAYER_GUESSED_MISS'; payload: { nickname: string; guessWord: string } }
   | { type: 'PLAYER_GUESSED_ALMOST'; payload: { nickname: string; guessWord: string } }
   | { type: 'DRAWER_QUIT'; payload: { nickname: string } }
+  | { type: 'PLAYER_CLOSE'; payload: { playerNick: string } }
   | { type: 'DRAW_BROADCAST'; payload: ClientPacketMap['DRAW_BROADCAST'] }
   | { type: 'CLEAR_CANVAS'; payload: Record<string, never> }
   | { type: 'ROUND_END'; payload: { word: string; leaderboard: RoundResultPlayer[] } }
