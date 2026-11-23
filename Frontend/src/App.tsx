@@ -102,17 +102,8 @@ export function App() {
 
     const handleDrawerQuit = (e: Event) => {
       const detail = (e as CustomEvent<{ nickname?: string }>).detail;
-      showNotice(`Rysownik ${detail?.nickname || ''} opuścił pokój.`, {
+      showNotice(`Rysownik ${detail?.nickname || ''} opuścił pokój — runda została zakończona.`, {
         title: 'Koniec rundy',
-        type: 'info',
-      });
-    };
-
-    const handlePlayerClose = (e: Event) => {
-      const detail = (e as CustomEvent<{ playerNick?: string }>).detail;
-      if (!detail?.playerNick || detail.playerNick === playerNicknameRef.current) return;
-      showNotice(`Gracz ${detail.playerNick} opuścił pokój.`, {
-        title: 'Gracz wyszedł',
         type: 'info',
       });
     };
@@ -121,13 +112,11 @@ export function App() {
     window.addEventListener('game-over', handleGameOver);
     window.addEventListener('back-to-lobby', handleBackToLobbyEvent);
     window.addEventListener('drawer-quit', handleDrawerQuit);
-    window.addEventListener('player-close', handlePlayerClose);
     return () => {
       window.removeEventListener('round-end', handleRoundEnd);
       window.removeEventListener('game-over', handleGameOver);
       window.removeEventListener('back-to-lobby', handleBackToLobbyEvent);
       window.removeEventListener('drawer-quit', handleDrawerQuit);
-      window.removeEventListener('player-close', handlePlayerClose);
     };
   }, []);
 
@@ -203,15 +192,20 @@ export function App() {
     const roomId = params.get('id');
     const pathname = window.location.pathname;
 
-    if (roomId) {
+    if (pathname.includes('host-room')) {
+      // Po odświeżeniu strony przez Hosta pokój na serwerze jest zamykany — wracamy na ekran główny
+      window.history.replaceState({}, '', '/');
+      setRoomCode(null);
+      setUserRole(null);
+      setHostData(null);
+      setCurrentView('menu');
+      return;
+    }
+
+    if (roomId && pathname.includes('room')) {
       setRoomCode(roomId);
-      if (pathname.includes('host-room')) {
-        setUserRole('host');
-        setCurrentView('host');
-      } else if (pathname.includes('room')) {
-        setUserRole('player');
-        setCurrentView('player');
-      }
+      setUserRole('player');
+      setCurrentView('player');
     }
   }, []);
 
@@ -278,6 +272,7 @@ export function App() {
     window.history.pushState({}, '', '/');
     setRoomCode(null);
     setUserRole(null);
+    setHostData(null);
     setConnectedPlayers([]);
     setCurrentView('menu');
   }, []);

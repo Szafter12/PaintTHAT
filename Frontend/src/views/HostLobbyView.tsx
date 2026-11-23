@@ -5,6 +5,7 @@ import type { GameSettings, PlayerInfo } from '../types/game';
 import type { SendPacketFn } from '../types/websocket';
 import '../styles/host.css';
 import '../styles/game.css';
+import { RoomQrCode } from './RoomQrCode';
 
 interface HostLobbyViewProps {
   sendPacket: SendPacketFn;
@@ -215,9 +216,7 @@ export function HostLobbyView({
 
           {/* Miejsce na kod QR (generowany z kodu pokoju – do dodania później) */}
           <div className="pixel-frame qr-frame">
-            <p className="hint-text">
-              Podaj kod graczom, aby mogli dołączyć.
-            </p>
+            <RoomQrCode roomCode={roomCode} />
           </div>
         </div>
 
