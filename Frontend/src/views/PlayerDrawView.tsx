@@ -20,15 +20,25 @@ const PALETTE = [
 
 export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: PlayerDrawViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  
+  const lastLocalPosRef = useRef<{ x: number; y: number } | null>(null);
+  const lastSentPosRef = useRef<{ x: number; y: number } | null>(null);
+  const lastSendTimeRef = useRef<number>(0);
+
   const isDrawingRef = useRef(false);
   const [color, setColor] = useState('#000000');
   const [size, setSize] = useState(5);
   const [isEraser, setIsEraser] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string>('');
 
-  // Na telefonie blokujemy „pull to refresh” i przewijanie strony podczas rysowania.
+  // Reset wybranego hasła przy nowej puli słów
+  useEffect(() => {
+    if (!isRoundActive) {
+      setSelectedWord('');
+    }
+  }, [wordOptions, isRoundActive]);
+
+  // Blokujemy „pull to refresh” i przewijanie strony podczas rysowania na telefonie
   useEffect(() => {
     if (!isRoundActive) return;
     const prev = document.body.style.overscrollBehavior;
@@ -38,35 +48,32 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     };
   }, [isRoundActive]);
 
-  const draw = (x: number, y: number) => {
-    if (!canvasRef.current || !lastPosRef.current) return;
+  const sendSegmentToHost = (fromX: number, fromY: number, toX: number, toY: number, canvas: HTMLCanvasElement) => {
+    sendPacket('DRAW_BROADCAST', {
+      x: toX / canvas.width,
+      y: toY / canvas.height,
+      prevX: fromX / canvas.width,
+      prevY: fromY / canvas.height,
+      color,
+      size,
+      isEraser,
+    });
+  };
+
+  const draw = (x: number, y: number, forceSend = false) => {
+    if (!canvasRef.current || !lastLocalPosRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const prevX = lastPosRef.current.x;
-    const prevY = lastPosRef.current.y;
+    const prevX = lastLocalPosRef.current.x;
+    const prevY = lastLocalPosRef.current.y;
 
-    // Normalizacja do 0.0 - 1.0 dla C++
-    const normX = x / canvas.width;
-    const normY = y / canvas.height;
-    const normPrevX = prevX / canvas.width;
-    const normPrevY = prevY / canvas.height;
-
-    sendPacket('DRAW_BROADCAST', { 
-      x: normX, 
-      y: normY, 
-      prevX: normPrevX, 
-      prevY: normPrevY, 
-      color, 
-      size, 
-      isEraser 
-    });
-
-    // Rysowanie na własnym telefonie
+    // 1. Natychmiastowe rysowanie lokalne na telefonie (bez opóźnień)
     ctx.lineWidth = size;
     ctx.lineCap = 'round';
-    
+    ctx.lineJoin = 'round';
+
     if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
     } else {
@@ -79,7 +86,17 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    lastPosRef.current = { x, y };
+    lastLocalPosRef.current = { x, y };
+
+    // 2. Kontrolowane wysyłanie do C++ (max ~60 pakietów/s, żeby nie zapchać WebSocketa)
+    const now = performance.now();
+    const sentFrom = lastSentPosRef.current ?? { x: prevX, y: prevY };
+
+    if (forceSend || now - lastSendTimeRef.current >= 16) {
+      sendSegmentToHost(sentFrom.x, sentFrom.y, x, y, canvas);
+      lastSentPosRef.current = { x, y };
+      lastSendTimeRef.current = now;
+    }
   };
 
   const getPointerPos = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -92,38 +109,47 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     };
   };
 
-  // Pointer Events: jedna obsługa dla palca, rysika i myszy.
-  // setPointerCapture – linia nie urywa się, gdy palec wyjedzie poza płótno.
   const startDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     isDrawingRef.current = true;
     const pos = getPointerPos(e);
-    lastPosRef.current = pos;
-    draw(pos.x, pos.y);
+    lastLocalPosRef.current = pos;
+    lastSentPosRef.current = pos;
+    draw(pos.x, pos.y, true);
   };
 
   const drawMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
     const pos = getPointerPos(e);
-    draw(pos.x, pos.y);
+    draw(pos.x, pos.y, false);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (isDrawingRef.current && e && canvasRef.current && lastSentPosRef.current) {
+      const pos = getPointerPos(e);
+      if (pos.x !== lastSentPosRef.current.x || pos.y !== lastSentPosRef.current.y) {
+        sendSegmentToHost(lastSentPosRef.current.x, lastSentPosRef.current.y, pos.x, pos.y, canvasRef.current);
+      }
+    }
     isDrawingRef.current = false;
-    lastPosRef.current = null;
+    lastLocalPosRef.current = null;
+    lastSentPosRef.current = null;
   };
 
   const handleClear = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    // Host dostaje sygnał jako zwykły DRAW_BROADCAST z x = y = -1 (serwer go przekazuje),
-    // dodatkowo wysyłamy osobny pakiet CLEAR_CANVAS na wypadek, gdyby serwer go obsługiwał.
     sendPacket('DRAW_BROADCAST', {
       x: -1, y: -1, prevX: -1, prevY: -1,
       color: '#000000', size: 1, isEraser: false,
     });
     sendPacket('CLEAR_CANVAS', {});
+  };
+
+  const handlePickWord = (word: string) => {
+    setSelectedWord(word);
+    sendPacket('PICKED_WORD', { guessWord: word });
   };
 
   // ---------------------------------------------------------
@@ -133,23 +159,21 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     return (
       <div className="menu player-screen">
         <h2>Wybierz hasło:</h2>
-        
+
         <div className="word-choice">
-          {/* Zabezpieczenie przed brakiem danych z C++ */}
           {wordOptions && wordOptions.length > 0 ? (
             wordOptions.map((word, index) => (
-              <button 
-                key={index} 
+              <button
+                key={index}
                 className="word-btn"
-                onClick={() => sendPacket('PICKED_WORD', { guessWord: word })}
+                onClick={() => handlePickWord(word)}
               >
                 {word}
               </button>
             ))
           ) : (
             <p className="empty-text">
-              Oczekiwanie na słowa od serwera... 
-              (Jeśli to trwa długo, upewnij się, że serwer wysłał tablicę słów w pakiecie CHOOSE_WORD).
+              Oczekiwanie na słowa od serwera...
             </p>
           )}
         </div>
@@ -158,11 +182,10 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
   }
 
   // ---------------------------------------------------------
-  // EKRAN RYSOWANIA (Aktywuje się, gdy C++ zacznie odliczać czas)
+  // EKRAN RYSOWANIA
   // ---------------------------------------------------------
   return (
     <div className="draw-screen">
-      {/* Widoczne tylko na wąskim ekranie w pionie (patrz CSS) */}
       {!hintDismissed && (
         <div className="rotate-hint">
           <span>📱 Obróć telefon poziomo – będziesz mieć większe płótno</span>
@@ -170,12 +193,33 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
         </div>
       )}
 
+      {/* Pasek z wylosowanym hasłem widoczny zawsze obok/nad płótnem */}
+      <div
+        style={{
+          background: 'rgba(0, 0, 0, 0.75)',
+          border: '2px solid #ff0055',
+          borderRadius: '10px',
+          padding: '8px 18px',
+          marginBottom: '8px',
+          color: '#fff',
+          fontSize: '18px',
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}
+      >
+        Hasło do narysowania:{' '}
+        <span style={{ color: '#ffd800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          {selectedWord || '—'}
+        </span>
+      </div>
+
       <div className="canvas-frame draw-canvas-frame">
         <canvas
           ref={canvasRef}
           width={800}
           height={600}
           className="game-canvas"
+          style={{ touchAction: 'none' }}
           onPointerDown={startDrawing}
           onPointerMove={drawMove}
           onPointerUp={stopDrawing}
@@ -194,7 +238,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
               onClick={() => { setColor(c); setIsEraser(false); }}
             />
           ))}
-          {/* Własny kolor – systemowy wybierak */}
           <label
             className={`swatch custom ${!isEraser && !PALETTE.includes(color) ? 'selected' : ''}`}
             aria-label="Własny kolor"

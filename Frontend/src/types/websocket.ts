@@ -1,13 +1,14 @@
-import type { PlayerInfo } from './game';
+import type { PlayerInfo, RoundResultPlayer, FinalResultPlayer } from './game';
 
 export interface ClientPacketMap {
   HOST_INIT: Record<string, never>;
   PLAYER_JOIN: { nickname: string; avatar: string };
   START_GAME: { maxRounds: number; roundTime: number; words: string[] };
-  
 
-  PICKED_WORD: { guessWord: string }; 
-  
+  PICKED_WORD: { guessWord: string };
+  NEXT_ROUND: Record<string, never>;
+  BACK_TO_LOBBY: Record<string, never>;
+
   SUBMIT_GUESS: { guess: string };
   DRAW_BROADCAST: { x: number; y: number; prevX: number; prevY: number; color: string; size: number; isEraser: boolean };
   CLEAR_CANVAS: Record<string, never>;
@@ -41,7 +42,8 @@ export type ServerPacket =
   | { type: 'DRAWER_QUIT'; payload: { nickname: string } }
   | { type: 'DRAW_BROADCAST'; payload: ClientPacketMap['DRAW_BROADCAST'] }
   | { type: 'CLEAR_CANVAS'; payload: Record<string, never> }
-  | { type: 'ROUND_END'; payload: { leaderboard: any } }
+  | { type: 'ROUND_END'; payload: { word: string; leaderboard: RoundResultPlayer[] } }
   | { type: 'KICKED'; payload: { reason?: string } }
-  | { type: 'GAME_OVER'; payload: { leaderboard?: any } }
-  | { type: 'GAME_ENDED'; payload: { leaderboard?: any } };
+  | { type: 'GAME_OVER'; payload: { leaderboard: FinalResultPlayer[] } }
+  | { type: 'GAME_ENDED'; payload: { leaderboard?: FinalResultPlayer[] } }
+  | { type: 'BACK_TO_LOBBY'; payload: Record<string, never> };

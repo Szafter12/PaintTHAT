@@ -46,8 +46,11 @@ void RoundStartState::onEnter(Room &room) {
     json packetToDrawer = Packet::makeChooseWord(threeWords);
     room.sendJson(drawer->getConn(), packetToDrawer);
 
-    json packetToOthers = Packet::makeWaitingForWord(room.getCurrentDrawer()->getNick());
+    json packetToOthers = Packet::makeWaitingForWord(drawer->getNick());
     room.broadcastExcept(drawer->getConn(), packetToOthers);
+    if (room.getHostConn()) {
+        room.sendJson(room.getHostConn(), packetToOthers);
+    }
 }
 
 void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
