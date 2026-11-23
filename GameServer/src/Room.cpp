@@ -32,7 +32,7 @@ void Room::onClose(crow::websocket::connection &conn) {
 
 void Room::setupRoom(const json &packet) {
     const auto &payload = packet.at("payload");
-
+    this->currentRound = 0;
     int maxRounds_p = payload.at("maxRounds").get<int>();
     int roundTime_p = payload.at("roundTime").get<int>();
 

@@ -104,8 +104,14 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
-    } else if (type == "DRAW_BROADCAST" && &conn == room.getCurrentDrawer()->getConn()) {
-        room.getHostConn()->send_text(packet.dump());
+    } else if (type == "DRAW_BROADCAST" && room.getCurrentDrawer() && &conn == room.getCurrentDrawer()->getConn()) {
+        if (room.getHostConn()) {
+            room.getHostConn()->send_text(packet.dump());
+        }
+    } else if (type == "CLEAR_CANVAS" && room.getCurrentDrawer() && &conn == room.getCurrentDrawer()->getConn()) {
+        if (room.getHostConn()) {
+            room.getHostConn()->send_text(packet.dump());
+        }
     }
 }
 
@@ -120,19 +126,19 @@ void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn)
 }
 
 void RoundEndState::onEnter(Room &room) {
-    if (room.getCurrentRound() == room.getMaxRounds()) {
-        room.changeState(std::make_unique<EndGameState>());
-    } else {
-        room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
-        std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
-    }
+    room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
+    std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
     if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
-        room.changeState(std::make_unique<RoundStartState>());
+        if (room.getCurrentRound() >= room.getMaxRounds()) {
+            room.changeState(std::make_unique<EndGameState>());
+        } else {
+            room.changeState(std::make_unique<RoundStartState>());
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PlayerInfo, ChatMessage, RoundResultPlayer } from '../types/game';
-import type { SendPacketFn } from '../types/websocket';
+import type { DrawPoint, SendPacketFn } from '../types/websocket';
 import '../styles/game.css';
 
 interface HostGameViewProps {
@@ -65,13 +65,11 @@ export function HostGameView({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  // Przy każdej nowej rundzie czyścimy płótno i zamykamy podsumowanie poprzedniej rundy
   useEffect(() => {
     setRoundEndData(null);
     clearCanvasBoard();
   }, [currentRound, currentDrawer]);
 
-  // Gdy zaczyna się aktywne rysowanie, upewniamy się, że płótno jest czyste
   useEffect(() => {
     if (!isRoundActive) return;
     setRoundEndData(null);
@@ -81,7 +79,6 @@ export function HostGameView({
     return () => window.clearTimeout(t);
   }, [isRoundActive, currentDrawer]);
 
-  // Nasłuch na koniec rundy (ROUND_END) i start nowej (WAITING_FOR_WORD)
   useEffect(() => {
     const handleRoundEnd = (e: Event) => {
       const detail = (e as CustomEvent<{ word: string; leaderboard: RoundResultPlayer[] }>).detail;
@@ -108,7 +105,7 @@ export function HostGameView({
     };
   }, []);
 
-  // Rysowanie z pominięciem Reacta (60 FPS)
+  // Odbieranie zgrupowanych ścieżek rysowania
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -116,7 +113,16 @@ export function HostGameView({
     if (!ctx) return;
 
     const handleStroke = (e: CustomEvent) => {
-      const { x, y, prevX, prevY, color, size, isEraser } = e.detail;
+      const { x, y, prevX, prevY, color, size, isEraser, points } = e.detail as {
+        x: number;
+        y: number;
+        prevX: number;
+        prevY: number;
+        color: string;
+        size: number;
+        isEraser: boolean;
+        points?: DrawPoint[];
+      };
 
       if (x < 0 || y < 0) {
         ctx.globalCompositeOperation = 'source-over';
@@ -124,26 +130,52 @@ export function HostGameView({
         return;
       }
 
-      const realX = x * canvas.width;
-      const realY = y * canvas.height;
-      const realPrevX = prevX * canvas.width;
-      const realPrevY = prevY * canvas.height;
-
-      ctx.lineWidth = size;
+      const scaledSize = size * (canvas.width / 800);
+      ctx.lineWidth = scaledSize;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
       if (isEraser) {
         ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#000000';
       } else {
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = color;
+        ctx.fillStyle = color;
       }
 
-      ctx.beginPath();
-      ctx.moveTo(realPrevX, realPrevY);
-      ctx.lineTo(realX, realY);
-      ctx.stroke();
+      if (Array.isArray(points) && points.length >= 2) {
+        const firstX = points[0].x * canvas.width;
+        const firstY = points[0].y * canvas.height;
+        const lastX = points[points.length - 1].x * canvas.width;
+        const lastY = points[points.length - 1].y * canvas.height;
+
+        // Pojedyncze dotknięcie (kropka)
+        if (points.length === 2 && firstX === lastX && firstY === lastY) {
+          ctx.beginPath();
+          ctx.arc(firstX, firstY, scaledSize / 2, 0, Math.PI * 2);
+          ctx.fill();
+          return;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(firstX, firstY);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x * canvas.width, points[i].y * canvas.height);
+        }
+        ctx.stroke();
+      } else {
+        const realX = x * canvas.width;
+        const realY = y * canvas.height;
+        const realPrevX = prevX * canvas.width;
+        const realPrevY = prevY * canvas.height;
+
+        ctx.beginPath();
+        ctx.moveTo(realPrevX, realPrevY);
+        ctx.lineTo(realX, realY);
+        ctx.stroke();
+      }
     };
 
     const handleClear = () => {
@@ -173,12 +205,12 @@ export function HostGameView({
   }
 
   const drawerLabel = currentDrawer || 'Rysownik';
+  const isLastRound = currentRound >= maxRounds;
 
   return (
     <div className="game-host">
       {showStart && <div className="round-start-flash">START!</div>}
 
-      {/* LEWA STRONA: Płótno i Czas */}
       <div className="game-host-main">
         <div className="game-stage">
           <div className="game-stage-inner">
@@ -203,7 +235,6 @@ export function HostGameView({
                 className="game-canvas"
               />
 
-              {/* Nakładka z podsumowaniem rundy i przyciskiem przejścia dalej */}
               {roundEndData && (
                 <div
                   style={{
@@ -277,7 +308,7 @@ export function HostGameView({
                       cursor: 'pointer',
                     }}
                   >
-                    Następna runda ➔
+                    {isLastRound ? 'Wyniki końcowe 🏆' : 'Następna runda ➔'}
                   </button>
                 </div>
               )}
@@ -286,7 +317,6 @@ export function HostGameView({
         </div>
       </div>
 
-      {/* PRAWA STRONA: Tabela Graczy */}
       <aside className="scoreboard">
         <h3 className="scoreboard-title">TABELA WYNIKÓW</h3>
         <ul className="score-list">

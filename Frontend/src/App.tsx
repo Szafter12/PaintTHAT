@@ -50,13 +50,11 @@ export function App() {
   playerNicknameRef.current = playerData?.nickname || '';
   const roundStartedRef = useRef(false);
 
-  // Koniec rundy (ROUND_END) i koniec całej gry (GAME_OVER z C++)
   useEffect(() => {
     const handleRoundEnd = (e: Event) => {
       const detail = (e as CustomEvent<{ word?: string; leaderboard?: RoundResultPlayer[] }>).detail;
       setIsRoundActive(false);
 
-      // Aktualizujemy punkty wszystkich graczy (w tym rysownika!) z podsumowania rundy
       if (detail?.leaderboard && Array.isArray(detail.leaderboard)) {
         setConnectedPlayers((prev) =>
           prev.map((p) => {
@@ -76,7 +74,6 @@ export function App() {
       setIsRoundActive(false);
       setPlayerRoundEndWord(null);
 
-      // Aktualizujemy punkty końcowe z pakietu GAME_OVER
       if (detail?.leaderboard && Array.isArray(detail.leaderboard)) {
         setConnectedPlayers((prev) =>
           prev.map((p) => {
@@ -150,7 +147,6 @@ export function App() {
 
     const handleTimeLeft = (e: any) => {
       if (!roundStartedRef.current) {
-        // Dodatkowe zabezpieczenie przy starcie odliczania nowej rundy
         setChatMessages([]);
         setConnectedPlayers((prev) => prev.map((p) => ({ ...p, isGuessed: false })));
         if (userRoleRef.current === 'host') playSound('start');
@@ -235,7 +231,10 @@ export function App() {
   const handleGameStarted = useCallback(() => {
     setCurrentRound(0);
     setPlayerRoundEndWord(null);
-    setConnectedPlayers((prev) => prev.map((p) => ({ ...p, isGuessed: false })));
+    setChatMessages([]);
+    setConnectedPlayers((prev) =>
+      prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+    );
     setCurrentView(userRole === 'host' ? 'hostGame' : 'playerGuess');
   }, [userRole]);
 
@@ -300,10 +299,13 @@ export function App() {
     });
     setMaxRounds(settings.maxRounds);
     setCurrentRound(0);
+    setChatMessages([]);
+    setConnectedPlayers((prev) =>
+      prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+    );
     sendPacket('START_GAME', packet);
   };
 
-  // Ekran wyników → powiadamiamy C++ (BACK_TO_LOBBY) i wracamy do ustawień pokoju
   const handleBackToLobby = () => {
     sendPacket('BACK_TO_LOBBY', {});
     setCurrentRound(1);

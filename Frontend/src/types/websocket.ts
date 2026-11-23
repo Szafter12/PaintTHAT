@@ -1,5 +1,10 @@
 import type { PlayerInfo, RoundResultPlayer, FinalResultPlayer } from './game';
 
+export interface DrawPoint {
+  x: number;
+  y: number;
+}
+
 export interface ClientPacketMap {
   HOST_INIT: Record<string, never>;
   PLAYER_JOIN: { nickname: string; avatar: string };
@@ -10,7 +15,16 @@ export interface ClientPacketMap {
   BACK_TO_LOBBY: Record<string, never>;
 
   SUBMIT_GUESS: { guess: string };
-  DRAW_BROADCAST: { x: number; y: number; prevX: number; prevY: number; color: string; size: number; isEraser: boolean };
+  DRAW_BROADCAST: {
+    x: number;
+    y: number;
+    prevX: number;
+    prevY: number;
+    color: string;
+    size: number;
+    isEraser: boolean;
+    points?: DrawPoint[];
+  };
   CLEAR_CANVAS: Record<string, never>;
   KICK_PLAYER: { nickname: string };
 }
