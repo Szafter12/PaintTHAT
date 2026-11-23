@@ -21,11 +21,6 @@ int main() {
                 std::cout << "New connection\n";
             })
             .onclose([&](crow::websocket::connection &conn, const std::string &reason) {
-                /*
-                 * TODO
-                 * - add notification to every roomState while player close the conn
-                 * - refresh host
-                */
                 std::lock_guard<std::mutex> lock(roomsMutex);
 
                 auto it = connectionToRoom.find(&conn);

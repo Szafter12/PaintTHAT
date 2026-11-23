@@ -68,7 +68,7 @@ public:
     void nextRound();
 
     // Getters
-    const std::vector<Player> &getPlayers() const;
+    std::vector<Player> getPlayers() const;
 
     Player *getCurrentDrawer();
 

@@ -30,6 +30,14 @@ bool Player::getIsGuessed() const {
     return this->isGuessed;
 }
 
+crow::websocket::connection *Player::getConn() const {
+    return this->conn;
+}
+
+int Player::getPointsCurrentRound() const {
+    return this->pointsCurrentRound;
+}
+
 void Player::setIsDrawer(bool drawer) {
     this->isDrawer = drawer;
 }
@@ -42,10 +50,14 @@ void Player::resetCurrentRoundPoints() {
     this->pointsCurrentRound = 0;
 }
 
-crow::websocket::connection *Player::getConn() const {
-    return this->conn;
+void Player::resetConn() {
+    this->conn = nullptr;
 }
 
-int Player::getPointsCurrentRound() const {
-    return this->pointsCurrentRound;
+void Player::resetPoints() {
+    this->points = 0;
+}
+
+void Player::setConn(crow::websocket::connection &connection) {
+    this->conn = &connection;
 }
