@@ -18,7 +18,9 @@ public:
     virtual void handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     }
 
-    virtual void handleClose(Room &room, crow::websocket::connection &conn);
+    virtual void handleClose(Room &room, crow::websocket::connection &conn,
+                             const std::string &leftNick, bool wasDrawer) {
+    }
 };
 
 #endif

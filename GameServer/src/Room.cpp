@@ -27,7 +27,25 @@ void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
 
 void Room::onClose(crow::websocket::connection &conn) {
     std::lock_guard<std::mutex> lock(this->roomMutex);
-    this->currentState->handleClose(*this, conn);
+
+    Player *leavingPlayer = this->getPlayerByConn(&conn);
+    if (!leavingPlayer) return;
+
+    std::string leftNick = leavingPlayer->getNick();
+    crow::websocket::connection *drawerConn = this->getCurrentDrawer()->getConn();
+    bool wasDrawer = (drawerConn == &conn);
+
+    leavingPlayer->resetConn();
+    //removeFromGuessQueue(&conn);
+
+    broadcastAll(Packet::makeLobbyUpdate(pin, players));
+    broadcastAll(Packet::makePlayerCloseConnection(leftNick));
+
+
+    if (this->currentState) {
+        this->currentState->handleClose(*this, conn, leftNick, wasDrawer);
+    }
+
 }
 
 void Room::setupRoom(const json &packet) {
@@ -54,12 +72,12 @@ void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerN
 void Room::broadcastAll(const json &packet) const {
     const std::string serialized = packet.dump();
 
-    if (this->hostConn != nullptr) {
+    if (this->hostConn) {
         this->hostConn->send_text(serialized);
     }
 
     for (const auto &player: this->players) {
-        if (player.getConn() != nullptr) {
+        if (player.getConn()) {
             player.getConn()->send_text(serialized);
         }
     }
@@ -83,7 +101,11 @@ Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
     return nullptr;
 }
 
-std::vector<Player> Room::getPlayers() const {
+const std::vector<Player> &Room::getPlayers() const {
+    return this->players;
+}
+
+std::vector<Player> &Room::getPlayers() {
     return this->players;
 }
 
@@ -136,7 +158,7 @@ void Room::prepareNewRoundQueue() {
     this->drawStack.clear();
 
     for (size_t i{0}; i < this->getPlayersCount(); ++i) {
-        if (this->players[i].getConn() != nullptr) {
+        if (this->players[i].getConn()) {
             this->drawStack.push_back(i);
         }
     }
@@ -169,7 +191,7 @@ Player *Room::popNextDrawer() {
         size_t idx = this->drawStack.back();
         this->drawStack.pop_back();
 
-        if (this->players[idx].getConn() != nullptr) {
+        if (this->players[idx].getConn()) {
             this->players[idx].setIsDrawer(true);
             return &this->players[idx];
         }
@@ -286,7 +308,13 @@ int Room::getTimeLeft() const {
 }
 
 size_t Room::getGuessedPlayersCount() const {
-    return this->guessedQueue.size();
+    size_t guessedPlayersCount = 0;
+    for (const auto &player: this->players) {
+        if (player.getConn()) {
+            guessedPlayersCount++;
+        }
+    }
+    return guessedPlayersCount;
 }
 
 const std::vector<std::string> &Room::getCurrentWordsChoices() const {

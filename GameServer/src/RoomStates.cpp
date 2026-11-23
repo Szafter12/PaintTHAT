@@ -115,15 +115,15 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
     }
 }
 
-void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn) {
-    Player *drawer = room.getCurrentDrawer();
-
-    if (drawer && drawer->getConn() == &conn) {
-        room.stopCountdown();
-        room.broadcastAll(Packet::makeDrawerQuitGame(drawer->getNick()));
-        room.changeState(std::make_unique<RoundEndState>());
-    }
-}
+// void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn) {
+//     Player *drawer = room.getCurrentDrawer();
+//
+//     if (drawer && drawer->getConn() == &conn) {
+//         room.stopCountdown();
+//         room.broadcastAll(Packet::makeDrawerQuitGame(drawer->getNick()));
+//         room.changeState(std::make_unique<RoundEndState>());
+//     }
+// }
 
 void RoundEndState::onEnter(Room &room) {
     room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
@@ -163,4 +163,62 @@ void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, c
 
         room.changeState(std::make_unique<LobbyState>());
     }
+}
+
+void LobbyState::handleClose(Room &room, crow::websocket::connection &conn,
+                             const std::string &leftNick, bool wasDrawer) {
+}
+
+void RoundStartState::handleClose(Room &room, crow::websocket::connection &conn,
+                                  const std::string &leftNick, bool wasDrawer) {
+    if (wasDrawer) {
+        room.broadcastAll(Packet::makeDrawerQuitGame(leftNick));
+    }
+
+    if (room.getPlayersCount() < 2) {
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+        return;
+    }
+
+    if (wasDrawer) {
+        room.changeState(std::make_unique<RoundEndState>());
+    }
+}
+
+void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn,
+                                  const std::string &leftNick, bool wasDrawer) {
+    if (wasDrawer) {
+        room.stopCountdown();
+        room.broadcastAll(Packet::makeDrawerQuitGame(leftNick));
+    }
+
+    if (room.getPlayersCount() < 2) {
+        room.stopCountdown();
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+        return;
+    }
+
+    if (wasDrawer) {
+        room.changeState(std::make_unique<RoundEndState>());
+        return;
+    }
+
+    if (room.isAllGuessed()) {
+        room.stopCountdown();
+        room.changeState(std::make_unique<RoundEndState>());
+    }
+}
+
+void RoundEndState::handleClose(Room &room, crow::websocket::connection &conn,
+                                const std::string &leftNick, bool wasDrawer) {
+    if (room.getPlayersCount() < 2) {
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+    }
+}
+
+void EndGameState::handleClose(Room &room, crow::websocket::connection &conn,
+                               const std::string &leftNick, bool wasDrawer) {
 }
