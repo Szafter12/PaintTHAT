@@ -42,7 +42,13 @@ void Room::setupRoom(const json &packet) {
 }
 
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
-    this->players.emplace_back(std::string(playerName), conn);
+    if (auto it = std::ranges::find_if(this->players, [playerName](const auto &player) -> bool {
+        return player.getNick() == playerName;
+    }); it != this->players.end()) {
+        it->setConn(conn);
+    } else {
+        this->players.emplace_back(std::string(playerName), conn);
+    }
 }
 
 void Room::broadcastAll(const json &packet) const {
@@ -77,7 +83,7 @@ Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
     return nullptr;
 }
 
-const std::vector<Player> &Room::getPlayers() const {
+std::vector<Player> Room::getPlayers() const {
     return this->players;
 }
 
@@ -249,13 +255,14 @@ const std::vector<std::string> &Room::drawThreeWordsFromPool() {
 }
 
 bool Room::selectWordFromChoices(const std::string &chosenWord) {
-    if (const auto it = std::ranges::find(this->currentWordsChoices, chosenWord); it == this->currentWordsChoices.end()) {
+    if (const auto it = std::ranges::find(this->currentWordsChoices, chosenWord);
+        it == this->currentWordsChoices.end()) {
         return false;
     }
 
     this->guessingWord = chosenWord;
 
-    for (const auto& word : this->currentWordsChoices) {
+    for (const auto &word: this->currentWordsChoices) {
         if (word != chosenWord) {
             this->wordsPool.push_back(word);
         }

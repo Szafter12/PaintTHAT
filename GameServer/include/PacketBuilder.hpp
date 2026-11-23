@@ -143,30 +143,15 @@ namespace Packet {
         };
     }
 
-    inline json makeDrawerSendStrokeToHost(int x, int y, int prevX, int prevY, std::string_view color, int size,
-                                           bool isEraser) {
-        return {
-            {"type", "DRAW_BROADCAST"},
-            {
-                "payload", {
-                    {"x", x},
-                    {"y", y},
-                    {"prevX", prevX},
-                    {"prevY", prevY},
-                    {"color", color},
-                    {"size", size},
-                    {"isEraser", isEraser}
-                }
-            }
-        };
-    }
-
     inline json makeEndRound(const std::vector<Player> &players, std::string_view revealedWord) {
         json playersArray = json::array();
-        for (const auto &p: players) {
+
+        for (const auto &p : players) {
             playersArray.push_back({
                 {"nickname", p.getNick()},
-                {"points", p.getPoints()}
+                //{"avatar", p->getAvatar(},
+                {"score", p.getPoints()},
+                {"roundScore", p.getPointsCurrentRound()}
             });
         }
 
@@ -174,14 +159,61 @@ namespace Packet {
             {"type", "ROUND_END"},
             {
                 "payload", {
-                    {
-                        "leaderboard", {
-
-                        }
-                    }
-
+                    {"word", std::string(revealedWord)},
+                    {"leaderboard", playersArray}
                 }
             }
+        };
+    }
+
+    inline json makePlayerCloseConnection(std::string_view playerNick) {
+        return {
+            {"type", "PLAYER_CLOSE"},
+            {
+                "payload", {
+                    {"playerNick", playerNick}
+                }
+            }
+        };
+    }
+
+    inline json makeGameSummary(const std::vector<Player> &players) {
+        std::vector<const Player*> sorted;
+
+        sorted.reserve(players.size());
+        for (const auto &p : players) {
+            sorted.push_back(&p);
+        }
+
+        std::sort(sorted.begin(), sorted.end(), [](const Player* a, const Player* b) {
+            return a->getPoints() > b->getPoints();
+        });
+
+        json leaderboard = json::array();
+        int place = 1;
+        for (const auto &p : sorted) {
+            leaderboard.push_back({
+                {"place", place++},
+                {"nickname", p->getNick()},
+                //{"avatar", p->getAvatar()},
+                {"score", p->getPoints()}
+            });
+        }
+
+        return {
+            {"type", "GAME_OVER"},
+            {
+                "payload", {
+                    {"leaderboard", leaderboard}
+                }
+            }
+        };
+    }
+
+    inline json makeBackToLobby() {
+        return {
+            {"type", "BACK_TO_LOBBY"},
+            {"payload", json::object()}
         };
     }
 }
