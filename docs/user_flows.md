@@ -1,6 +1,6 @@
 ![user flow diagram](img/mermaid-diagram-2026-11-24-001603.png)
 
-## 2. Powiązanie kroków ze stanami i makietami High-Fi
+## 2. Powiązanie kroków ze stanami i makietami
 
 | ID Makiety | Komponent / Widok | Rola i urządzenie | Powiązane kroki w User Flow | Kluczowe elementy interfejsu i interakcje |
 | :--- | :--- | :--- | :--- | :--- |
@@ -16,9 +16,9 @@
 
 ---
 
-## 3. Stany systemu (System States)
+## 3. Stany systemu
 
-### A. Stany ładowania (Loading States)
+### A. Stany ładowania
 * **Inicjalizacja pokoju Hosta (`HF-01` → `HF-02`):** Po kliknięciu utworzenia pokoju aplikacja wysyła żądanie `POST /api/rooms/create` (z automatycznym przełączeniem na lokalny generator PIN-u w przypadku niedostępności API REST) oraz otwiera połączenie WebSocket (`HOST_INIT`).
 * **Pobieranie puli losowych słów (`HF-02`):** W lobby Hosta pobranie haseł z endpointu `GET /api/words/random` blokuje przycisk generowania do czasu otrzymania odpowiedzi z serwera.
 * **Przejście między lobby a rundą (`HF-04` → `HF-06`/`HF-07`):** Po odebraniu pakietu `GAME_STARTED`, zanim serwer wylosuje pierwszego rysownika (`CHOOSE_WORD` / `WAITING_FOR_WORD`), telefon gracza wyświetla dedykowany ekran przejściowy: *„Ładowanie rundy... Maszyna losująca wybiera rysownika...”*.
@@ -30,7 +30,7 @@
 * **Brak wpisów na czacie / tabeli wyników (`HF-05b`):** Na początku każdej nowej rundy historia zgadywań (`chatMessages`) oraz statusy odgadnięcia (`isGuessed`) są czyszczone — przy graczach nie wyświetlają się żadne etykiety z poprzednich rund, a płótno `<canvas>` jest całkowicie wyczyszczone.
 * **Podium przy niepełnej liczbie graczy (`HF-08`):** W widoku `HostResultsView` sloty podium (1, 2, 3) renderują się warunkowo (`if (!player) return null`), dzięki czemu przy 2 graczach 3. miejsce pozostaje puste bez błędów układu.
 
-### C. Stany błędne i brzegowe (Error & Edge States)
+### C. Stany błędne i brzegowe
 * **Za mało graczy do startu lub kontynuacji gry (`NOT_ENOUGH_PLAYERS`):**
   * *W lobby (`HF-02`):* Kliknięcie startu przy `< 2` graczach wywołuje komunikat w `NoticeHost` (*„Potrzeba minimum 2 graczy, aby rozpocząć grę”*).
   * *W trakcie rozgrywki (`HF-05`):* Gdy opuszczenie pokoju przez gracza obniży liczbę uczestników poniżej 2, serwer przerywa odliczanie, wyświetla powiadomienie `NoticeHost` (*„Za mało graczy, aby kontynuować grę”*) i przenosi grę na ekran końcowy (`HF-08`).
