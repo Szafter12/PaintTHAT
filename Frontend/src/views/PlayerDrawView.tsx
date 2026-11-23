@@ -67,7 +67,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
       points: [...pts],
     });
 
-    // Ostatni punkt staje się punktem startowym kolejnej paczki – zero przerw w linii
     pendingPointsRef.current = [last];
     lastSendTimeRef.current = performance.now();
   };
@@ -76,14 +75,15 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const rawY = ((e.clientY - rect.top) / rect.height) * canvas.height;
     return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+      x: Math.max(0, Math.min(canvas.width, rawX)),
+      y: Math.max(0, Math.min(canvas.height, rawY)),
     };
   };
 
   const startDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    // Ignorujemy drugi palec / dłoń, jeśli rysowanie jednym palcem już trwa
     if (activePointerIdRef.current !== null) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -96,7 +96,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     const pos = getPointerPos(e);
     lastLocalPosRef.current = pos;
 
-    // Rysujemy kropkę lokalnie na start dotknięcia
     ctx.save();
     if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
@@ -128,7 +127,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     const pos = getPointerPos(e);
     const prev = lastLocalPosRef.current;
 
-    // Rysowanie lokalne
     ctx.lineWidth = size;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -147,7 +145,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
 
     lastLocalPosRef.current = pos;
 
-    // Dopisujemy punkt do bufora sieciowego
     pendingPointsRef.current.push({
       x: Number((pos.x / canvas.width).toFixed(4)),
       y: Number((pos.y / canvas.height).toFixed(4)),

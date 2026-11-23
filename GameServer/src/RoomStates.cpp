@@ -134,7 +134,7 @@ void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, 
     std::string type = packet.at("type");
 
     if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
-        if (room.getCurrentRound() >= room.getMaxRounds()) {
+        if (room.getCurrentRound() > room.getMaxRounds()) {
             room.changeState(std::make_unique<EndGameState>());
         } else {
             room.changeState(std::make_unique<RoundStartState>());

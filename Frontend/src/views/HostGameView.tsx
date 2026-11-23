@@ -84,7 +84,9 @@ export function HostGameView({
       const detail = (e as CustomEvent<{ word: string; leaderboard: RoundResultPlayer[] }>).detail;
       clearCanvasBoard();
       if (detail) {
-        const sorted = [...(detail.leaderboard || [])].sort((a, b) => b.score - a.score);
+        const sorted = [...(detail.leaderboard || [])].sort(
+          (a, b) => (b.roundScore ?? 0) - (a.roundScore ?? 0)
+        );
         setRoundEndData({
           word: detail.word || '',
           leaderboard: sorted,
@@ -105,7 +107,6 @@ export function HostGameView({
     };
   }, []);
 
-  // Odbieranie zgrupowanych ścieżek rysowania
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -124,7 +125,8 @@ export function HostGameView({
         points?: DrawPoint[];
       };
 
-      if (x < 0 || y < 0) {
+      // Sygnał wyczyszczenia całego płótna (x === -1 && y === -1)
+      if (x === -1 && y === -1) {
         ctx.globalCompositeOperation = 'source-over';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
@@ -151,7 +153,6 @@ export function HostGameView({
         const lastX = points[points.length - 1].x * canvas.width;
         const lastY = points[points.length - 1].y * canvas.height;
 
-        // Pojedyncze dotknięcie (kropka)
         if (points.length === 2 && firstX === lastX && firstY === lastY) {
           ctx.beginPath();
           ctx.arc(firstX, firstY, scaledSize / 2, 0, Math.PI * 2);
@@ -289,11 +290,13 @@ export function HostGameView({
                         <span>
                           <strong>{idx + 1}.</strong> {entry.nickname}
                         </span>
-                        <span>
-                          <span style={{ color: '#00e676', fontWeight: 'bold', marginRight: '14px' }}>
-                            +{entry.roundScore} pkt
-                          </span>
-                          <span style={{ color: '#ccc' }}>({entry.score} pkt)</span>
+                        <span
+                          style={{
+                            color: entry.roundScore > 0 ? '#00e676' : '#aaa',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          +{entry.roundScore} pkt
                         </span>
                       </li>
                     ))}
