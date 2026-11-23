@@ -7,6 +7,7 @@ Player::Player(const std::string &nick, crow::websocket::connection &conn)
 void Player::addPoints(const int amount) {
     if (this->isDrawer) {
         this->pointsCurrentRound += amount;
+        this->points += amount;
         return;
     }
 

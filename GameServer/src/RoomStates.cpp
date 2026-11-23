@@ -17,6 +17,11 @@ void LobbyState::handlePacket(Room &room, crow::websocket::connection &conn, con
 
         json packetToSend = Packet::makeLobbyUpdate(room.getPin(), room.getPlayers());
         room.broadcastAll(packetToSend);
+    } else if (type == "KICK_PLAYER" && &conn == room.getHostConn()) {
+        std::string targetNick = packet.at("payload").at("nickname");
+        if (room.kickPlayer(targetNick)) {
+            room.broadcastAll(Packet::makeLobbyUpdate(room.getPin(), room.getPlayers()));
+        }
     } else if (type == "START_GAME" && &conn == room.getHostConn()) {
         if (room.getPlayersCount() < 2) {
             conn.send_text(
@@ -46,14 +51,17 @@ void RoundStartState::onEnter(Room &room) {
     json packetToDrawer = Packet::makeChooseWord(threeWords);
     room.sendJson(drawer->getConn(), packetToDrawer);
 
-    json packetToOthers = Packet::makeWaitingForWord(room.getCurrentDrawer()->getNick());
+    json packetToOthers = Packet::makeWaitingForWord(drawer->getNick());
     room.broadcastExcept(drawer->getConn(), packetToOthers);
+    if (room.getHostConn()) {
+        room.sendJson(room.getHostConn(), packetToOthers);
+    }
 }
 
 void RoundStartState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    if (type == "PICKED_WORD" && room.getCurrentDrawer()->getConn() == &conn) {
+    if (type == "PICKED_WORD" && room.getCurrentDrawer() && room.getCurrentDrawer()->getConn() == &conn) {
         const std::string guessWord = packet.at("payload").at("guessWord");
 
         if (room.selectWordFromChoices(guessWord)) {
@@ -69,22 +77,23 @@ void WhileRoundState::onEnter(Room &room) {
 void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
-    if (type == "SUBMIT_GUESS" && &conn != room.getCurrentDrawer()->getConn()) {
+    if (type == "SUBMIT_GUESS" && room.getCurrentDrawer() && &conn != room.getCurrentDrawer()->getConn()) {
+        Player *guesser = room.getPlayerByConn(&conn);
+        if (!guesser) return;
+
         std::string guessWord = packet.at("payload").at("guess");
-        std::string nickname = room.getPlayerByConn(&conn)->getNick();
+        std::string nickname = guesser->getNick();
 
         switch (room.checkGuess(guessWord)) {
             case Guessing::Guessed: {
                 int pointsForGuesser = room.addPointsToPlayers(&conn);
                 room.addToGuessQueue(&conn);
                 room.broadcastAll(
-                    Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser,
-                                                       room.getPlayerByConn(&conn)->getPoints()));
+                    Packet::makePlayerGuessedCorrectly(nickname, pointsForGuesser, guesser->getPoints()));
 
                 if (room.isAllGuessed()) {
                     room.stopCountdown();
                     room.changeState(std::make_unique<RoundEndState>());
-                    std::cout << "All guessed\n";
                 }
 
                 break;
@@ -101,39 +110,36 @@ void WhileRoundState::handlePacket(Room &room, crow::websocket::connection &conn
             default:
                 break;
         }
-    } else if (type == "DRAW_BROADCAST" && &conn == room.getCurrentDrawer()->getConn()) {
-        room.getHostConn()->send_text(packet.dump());
-    }
-}
-
-void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn) {
-    Player *drawer = room.getCurrentDrawer();
-
-    if (drawer && drawer->getConn() == &conn) {
-        room.stopCountdown();
-        room.broadcastAll(Packet::makeDrawerQuitGame(drawer->getNick()));
-        room.changeState(std::make_unique<RoundEndState>());
+    } else if (type == "DRAW_BROADCAST" && room.getCurrentDrawer() && &conn == room.getCurrentDrawer()->getConn()) {
+        if (room.getHostConn()) {
+            room.getHostConn()->send_text(packet.dump());
+        }
+    } else if (type == "CLEAR_CANVAS" && room.getCurrentDrawer() && &conn == room.getCurrentDrawer()->getConn()) {
+        if (room.getHostConn()) {
+            room.getHostConn()->send_text(packet.dump());
+        }
     }
 }
 
 void RoundEndState::onEnter(Room &room) {
-    if (room.getCurrentRound() == room.getMaxRounds()) {
-        room.changeState(std::make_unique<EndGameState>());
-    } else {
-        room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
-        std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
-    }
+    room.broadcastAll(Packet::makeEndRound(room.getPlayers(), room.getSecretWord()));
+    std::ranges::for_each(room.getPlayers(), [](auto &player) { player.resetCurrentRoundPoints(); });
 }
 
 void RoundEndState::handlePacket(Room &room, crow::websocket::connection &conn, const json &packet) {
     std::string type = packet.at("type");
 
     if (type == "NEXT_ROUND" && &conn == room.getHostConn()) {
-        room.changeState(std::make_unique<RoundStartState>());
+        if (room.getCurrentRound() >= room.getMaxRounds()) {
+            room.changeState(std::make_unique<EndGameState>());
+        } else {
+            room.changeState(std::make_unique<RoundStartState>());
+        }
     }
 }
 
 void EndGameState::onEnter(Room &room) {
+    room.stopCountdown();
     room.broadcastAll(Packet::makeGameSummary(room.getPlayers()));
 }
 
@@ -146,12 +152,70 @@ void EndGameState::handlePacket(Room &room, crow::websocket::connection &conn, c
         for (auto &player: room.getPlayers()) {
             player.resetPoints();
             player.resetCurrentRoundPoints();
+            player.setIsGuessed(false);
+            player.setIsDrawer(false);
         }
 
         room.broadcastAll(Packet::makeBackToLobby());
-
         room.broadcastAll(Packet::makeLobbyUpdate(room.getPin(), room.getPlayers()));
-
         room.changeState(std::make_unique<LobbyState>());
     }
+}
+
+void LobbyState::handleClose(Room &room, crow::websocket::connection &conn,
+                             const std::string &leftNick, bool wasDrawer) {
+}
+
+void RoundStartState::handleClose(Room &room, crow::websocket::connection &conn,
+                                  const std::string &leftNick, bool wasDrawer) {
+    if (wasDrawer) {
+        room.broadcastAll(Packet::makeDrawerQuitGame(leftNick));
+    }
+
+    if (room.getPlayersCount() < 2) {
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+        return;
+    }
+
+    if (wasDrawer) {
+        room.changeState(std::make_unique<RoundEndState>());
+    }
+}
+
+void WhileRoundState::handleClose(Room &room, crow::websocket::connection &conn,
+                                  const std::string &leftNick, bool wasDrawer) {
+    if (wasDrawer) {
+        room.stopCountdown();
+        room.broadcastAll(Packet::makeDrawerQuitGame(leftNick));
+    }
+
+    if (room.getPlayersCount() < 2) {
+        room.stopCountdown();
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+        return;
+    }
+
+    if (wasDrawer) {
+        room.changeState(std::make_unique<RoundEndState>());
+        return;
+    }
+
+    if (room.isAllGuessed()) {
+        room.stopCountdown();
+        room.changeState(std::make_unique<RoundEndState>());
+    }
+}
+
+void RoundEndState::handleClose(Room &room, crow::websocket::connection &conn,
+                                const std::string &leftNick, bool wasDrawer) {
+    if (room.getPlayersCount() < 2) {
+        room.broadcastAll(Packet::makeError("NOT_ENOUGH_PLAYERS", "Za mało graczy, aby kontynuować grę."));
+        room.changeState(std::make_unique<EndGameState>());
+    }
+}
+
+void EndGameState::handleClose(Room &room, crow::websocket::connection &conn,
+                               const std::string &leftNick, bool wasDrawer) {
 }

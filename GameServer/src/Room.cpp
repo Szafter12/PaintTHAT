@@ -25,20 +25,98 @@ void Room::onPacket(crow::websocket::connection &conn, const json &packet) {
     this->currentState->handlePacket(*this, conn, packet);
 }
 
+void Room::removePlayerAt(size_t idx) {
+    if (idx >= this->players.size()) return;
+    this->players.erase(this->players.begin() + static_cast<std::ptrdiff_t>(idx));
+
+    std::vector<size_t> updatedStack;
+    updatedStack.reserve(this->drawStack.size());
+    for (size_t stackIdx: this->drawStack) {
+        if (stackIdx == idx) continue;
+        updatedStack.push_back(stackIdx > idx ? stackIdx - 1 : stackIdx);
+    }
+    this->drawStack = std::move(updatedStack);
+}
+
+bool Room::kickPlayer(std::string_view nickname) {
+    auto it = std::ranges::find_if(this->players, [nickname](const Player &p) {
+        return p.getNick() == nickname;
+    });
+    if (it == this->players.end()) return false;
+
+    crow::websocket::connection *targetConn = it->getConn();
+    size_t idx = static_cast<size_t>(std::distance(this->players.begin(), it));
+
+    this->removePlayerAt(idx);
+
+    if (targetConn) {
+        targetConn->send_text(Packet::makeKicked("Host usunął Cię z pokoju.").dump());
+        targetConn->close();
+    }
+
+    return true;
+}
+
+void Room::onHostDisconnect() {
+    this->stopCountdown();
+
+    std::lock_guard<std::mutex> lock(this->roomMutex);
+    this->hostConn = nullptr;
+
+    const std::string msg = Packet::makeError(
+        "HOST_LEFT",
+        "Host opuścił pokój. Rozgrywka została zakończona."
+    ).dump();
+
+    for (auto &player: this->players) {
+        if (crow::websocket::connection *pConn = player.getConn()) {
+            player.resetConn();
+            pConn->send_text(msg);
+            pConn->close();
+        }
+    }
+    this->players.clear();
+    this->drawStack.clear();
+}
+
 void Room::onClose(crow::websocket::connection &conn) {
     std::lock_guard<std::mutex> lock(this->roomMutex);
-    this->currentState->handleClose(*this, conn);
+
+    auto it = std::ranges::find_if(this->players, [&conn](const Player &p) {
+        return p.getConn() == &conn;
+    });
+    if (it == this->players.end()) return;
+
+    std::string leftNick = it->getNick();
+    bool wasDrawer = it->getIsDrawer();
+    size_t idx = static_cast<size_t>(std::distance(this->players.begin(), it));
+
+    this->removePlayerAt(idx);
+
+    broadcastAll(Packet::makeLobbyUpdate(pin, players));
+    broadcastAll(Packet::makePlayerCloseConnection(leftNick));
+
+    if (this->currentState) {
+        this->currentState->handleClose(*this, conn, leftNick, wasDrawer);
+    }
 }
 
 void Room::setupRoom(const json &packet) {
     const auto &payload = packet.at("payload");
-
+    this->currentRound = 0;
     int maxRounds_p = payload.at("maxRounds").get<int>();
     int roundTime_p = payload.at("roundTime").get<int>();
 
     this->maxRounds = std::max(1, maxRounds_p);
     this->roundTime = std::max(10, roundTime_p);
     this->initWordPool(payload.at("words").get<std::vector<std::string> >());
+
+    for (auto &player: this->players) {
+        player.resetPoints();
+        player.resetCurrentRoundPoints();
+        player.setIsGuessed(false);
+        player.setIsDrawer(false);
+    }
 }
 
 void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerName) {
@@ -54,12 +132,12 @@ void Room::addPlayer(crow::websocket::connection &conn, std::string_view playerN
 void Room::broadcastAll(const json &packet) const {
     const std::string serialized = packet.dump();
 
-    if (this->hostConn != nullptr) {
+    if (this->hostConn) {
         this->hostConn->send_text(serialized);
     }
 
     for (const auto &player: this->players) {
-        if (player.getConn() != nullptr) {
+        if (player.getConn()) {
             player.getConn()->send_text(serialized);
         }
     }
@@ -83,7 +161,11 @@ Player *Room::getPlayerByConn(const crow::websocket::connection *conn) {
     return nullptr;
 }
 
-std::vector<Player> Room::getPlayers() const {
+const std::vector<Player> &Room::getPlayers() const {
+    return this->players;
+}
+
+std::vector<Player> &Room::getPlayers() {
     return this->players;
 }
 
@@ -135,16 +217,14 @@ const std::string &Room::getPin() const {
 void Room::prepareNewRoundQueue() {
     this->drawStack.clear();
 
-    for (size_t i{0}; i < this->getPlayersCount(); ++i) {
-        if (this->players[i].getConn() != nullptr) {
+    for (size_t i{0}; i < this->players.size(); ++i) {
+        if (this->players[i].getConn()) {
             this->drawStack.push_back(i);
         }
     }
 
     static std::mt19937 rng{std::random_device{}()};
     std::ranges::shuffle(this->drawStack, rng);
-
-    this->currentRound++;
 }
 
 Guessing Room::checkGuess(std::string_view guess) const {
@@ -163,13 +243,14 @@ Guessing Room::checkGuess(std::string_view guess) const {
 Player *Room::popNextDrawer() {
     for (auto &p: players) {
         p.setIsDrawer(false);
+        p.setIsGuessed(false);
     }
 
     while (!this->drawStack.empty()) {
         size_t idx = this->drawStack.back();
         this->drawStack.pop_back();
 
-        if (this->players[idx].getConn() != nullptr) {
+        if (idx < this->players.size() && this->players[idx].getConn()) {
             this->players[idx].setIsDrawer(true);
             return &this->players[idx];
         }
@@ -205,9 +286,10 @@ void Room::sendJson(crow::websocket::connection *conn, const nlohmann::json &pac
 }
 
 void Room::broadcastExcept(const crow::websocket::connection *conn, const json &packet) const {
+    const std::string serialized = packet.dump();
     for (auto &player: this->players) {
-        if (player.getConn() == conn) continue;
-        player.getConn()->send_text(packet.dump());
+        if (!player.getConn() || player.getConn() == conn) continue;
+        player.getConn()->send_text(serialized);
     }
 }
 
@@ -286,7 +368,13 @@ int Room::getTimeLeft() const {
 }
 
 size_t Room::getGuessedPlayersCount() const {
-    return this->guessedQueue.size();
+    size_t guessedPlayersCount = 0;
+    for (const auto &player: this->players) {
+        if (player.getConn() && player.getIsGuessed()) {
+            guessedPlayersCount++;
+        }
+    }
+    return guessedPlayersCount;
 }
 
 const std::vector<std::string> &Room::getCurrentWordsChoices() const {

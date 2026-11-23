@@ -9,7 +9,7 @@ interface UseGameSocketParams {
   playerData: PlayerSession | null;
   onLobbyUpdate: (players: PlayerInfo[]) => void;
   onGameStarted: () => void;
-  onPlayerGuessed: (nickname: string, earnedPoints: number) => void;
+  onPlayerGuessed: (nickname: string, earnedPoints: number, totalPoints?: number) => void;
   onRoomError: (code: string, message: string) => void;
 }
 
@@ -48,7 +48,6 @@ export function useGameSocket({
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log(`Połączono z GameServer C++ jako ${userRole}`);
       if (userRole === 'host') {
         sendPacket('HOST_INIT', {});
       } else if (userRole === 'player' && playerData?.nickname) {
@@ -62,59 +61,64 @@ export function useGameSocket({
     ws.onmessage = (event: MessageEvent<string>) => {
       try {
         const data = JSON.parse(event.data) as ServerPacket;
-        console.log('C++ wysłał:', data);
 
         switch (data.type) {
           case 'LOBBY_UPDATE':
             onLobbyUpdate(data.payload.players || []);
             break;
+
           case 'GAME_STARTED':
             onGameStarted();
             break;
-            
-          // C++ wysyła CHOOSE_WORD (tylko do Rysownika, z listą słów)
+
           case 'CHOOSE_WORD':
             window.dispatchEvent(new CustomEvent('choose-word', { detail: data.payload.words }));
             break;
-            
-          // C++ wysyła WAITING_FOR_WORD (do zgadujących, podaje tylko nick)
+
           case 'WAITING_FOR_WORD':
             window.dispatchEvent(new CustomEvent('waiting-for-word', { detail: data.payload.drawer }));
             break;
-            
+
           case 'TIME_LEFT':
             window.dispatchEvent(new CustomEvent('time-left', { detail: data.payload.time }));
             break;
-            
+
           case 'PLAYER_GUESSED_CORRECTLY':
-            onPlayerGuessed(data.payload.nickname, data.payload.pointAwarded);
+            onPlayerGuessed(
+              data.payload.nickname,
+              data.payload.pointAwarded,
+              data.payload.totalPoints
+            );
             break;
 
-          // NOWE: Błędne zgadnięcia lub literówki (przekazujemy do App.tsx)
           case 'PLAYER_GUESSED_MISS':
             window.dispatchEvent(new CustomEvent('guess-miss', { detail: data.payload }));
             break;
-            
+
           case 'PLAYER_GUESSED_ALMOST':
             window.dispatchEvent(new CustomEvent('guess-almost', { detail: data.payload }));
             break;
 
-          // Rysowanie z C++ do TV
           case 'DRAW_BROADCAST':
             window.dispatchEvent(new CustomEvent('draw-broadcast', { detail: data.payload }));
             break;
 
-          // Rysownik wyczyścił płótno – czyścimy je też na ekranie hosta
           case 'CLEAR_CANVAS':
             window.dispatchEvent(new CustomEvent('clear-canvas'));
             break;
 
-          // Koniec rundy / całej gry (obsługa w App.tsx)
           case 'ROUND_END':
             window.dispatchEvent(new CustomEvent('round-end', { detail: data.payload }));
             break;
 
-          // Host usunął tego gracza z pokoju
+          case 'DRAWER_QUIT':
+            window.dispatchEvent(new CustomEvent('drawer-quit', { detail: data.payload }));
+            break;
+
+          case 'PLAYER_CLOSE':
+            window.dispatchEvent(new CustomEvent('player-close', { detail: data.payload }));
+            break;
+
           case 'KICKED':
             window.dispatchEvent(new CustomEvent('kicked', { detail: data.payload }));
             break;
@@ -124,6 +128,10 @@ export function useGameSocket({
             window.dispatchEvent(new CustomEvent('game-over', { detail: data.payload }));
             break;
 
+          case 'BACK_TO_LOBBY':
+            window.dispatchEvent(new CustomEvent('back-to-lobby'));
+            break;
+
           case 'ERROR':
             onRoomError(data.payload.code, data.payload.message);
             break;
@@ -131,10 +139,6 @@ export function useGameSocket({
       } catch (err) {
         console.error('Błąd parsowania pakietu z C++:', err);
       }
-    };
-
-    ws.onclose = () => {
-      console.log('Rozłączono z GameServerem.');
     };
 
     return () => {

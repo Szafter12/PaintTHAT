@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "Player.hpp"
 
 using json = nlohmann::json;
@@ -21,9 +22,21 @@ namespace Packet {
         };
     }
 
+    inline json makeKicked(std::string_view reason = "Host usunął Cię z pokoju.") {
+        return {
+            {"type", "KICKED"},
+            {
+                "payload", {
+                    {"reason", reason}
+                }
+            }
+        };
+    }
+
     inline json makeLobbyUpdate(std::string_view pin, const std::vector<Player> &players) {
         json playersArray = json::array();
         for (const auto &p: players) {
+            if (!p.getConn()) continue;
             playersArray.push_back({
                 {"nickname", p.getNick()},
                 {"points", p.getPoints()}
@@ -146,10 +159,10 @@ namespace Packet {
     inline json makeEndRound(const std::vector<Player> &players, std::string_view revealedWord) {
         json playersArray = json::array();
 
-        for (const auto &p : players) {
+        for (const auto &p: players) {
+            if (!p.getConn()) continue;
             playersArray.push_back({
                 {"nickname", p.getNick()},
-                //{"avatar", p->getAvatar(},
                 {"score", p.getPoints()},
                 {"roundScore", p.getPointsCurrentRound()}
             });
@@ -178,24 +191,24 @@ namespace Packet {
     }
 
     inline json makeGameSummary(const std::vector<Player> &players) {
-        std::vector<const Player*> sorted;
+        std::vector<const Player *> sorted;
 
         sorted.reserve(players.size());
-        for (const auto &p : players) {
+        for (const auto &p: players) {
+            if (!p.getConn()) continue;
             sorted.push_back(&p);
         }
 
-        std::sort(sorted.begin(), sorted.end(), [](const Player* a, const Player* b) {
+        std::sort(sorted.begin(), sorted.end(), [](const Player *a, const Player *b) {
             return a->getPoints() > b->getPoints();
         });
 
         json leaderboard = json::array();
         int place = 1;
-        for (const auto &p : sorted) {
+        for (const auto &p: sorted) {
             leaderboard.push_back({
                 {"place", place++},
                 {"nickname", p->getNick()},
-                //{"avatar", p->getAvatar()},
                 {"score", p->getPoints()}
             });
         }

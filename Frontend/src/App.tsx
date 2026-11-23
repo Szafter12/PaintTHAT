@@ -9,7 +9,9 @@ import type {
   PlayerInfo,
   PlayerSession,
   UserRole,
-  ChatMessage
+  ChatMessage,
+  RoundResultPlayer,
+  FinalResultPlayer,
 } from './types/game';
 import { MenuView } from './views/MenuView';
 import { HostLobbyView } from './views/HostLobbyView';
@@ -35,85 +37,150 @@ export function App() {
   const [roundTimeLeft, setRoundTimeLeft] = useState<number>(0);
   const [isRoundActive, setIsRoundActive] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [maxRounds, setMaxRounds] = useState<number>(3);
+  const [playerRoundEndWord, setPlayerRoundEndWord] = useState<string | null>(null);
   const [lastSettings, setLastSettings] = useState<
     { maxRounds: number; roundTime: number; customWords: string[] } | undefined
   >(undefined);
 
-  // Licznik rund (jedna runda = jedno rysowanie) – do wykrycia końca gry po stronie hosta
-  const roundsPlayedRef = useRef(0);
-  const maxRoundsRef = useRef(0);
   const userRoleRef = useRef<UserRole | null>(null);
   userRoleRef.current = userRole;
   const playerNicknameRef = useRef('');
   playerNicknameRef.current = playerData?.nickname || '';
-  const roundStartedRef = useRef(false); // czy w tej rundzie zabrzmiał już dźwięk startu
+  const roundStartedRef = useRef(false);
 
-  // Koniec gry: ROUND_END ostatniej rundy albo pakiet GAME_OVER z serwera
   useEffect(() => {
-    let timer: number | undefined;
+    const handleRoundEnd = (e: Event) => {
+      const detail = (e as CustomEvent<{ word?: string; leaderboard?: RoundResultPlayer[] }>).detail;
+      setIsRoundActive(false);
 
-    const finishGame = () => {
-      window.clearTimeout(timer);
-      // Chwila na obejrzenie ostatniego rysunku, potem ekran wyników
-      timer = window.setTimeout(() => {
-        setIsRoundActive(false);
-        setCurrentView(userRoleRef.current === 'host' ? 'hostResults' : 'playerRoom');
-      }, 2000);
+      if (detail?.leaderboard && Array.isArray(detail.leaderboard)) {
+        setConnectedPlayers((prev) =>
+          prev.map((p) => {
+            const entry = detail.leaderboard!.find((item) => item.nickname === p.nickname);
+            return entry ? { ...p, points: entry.score } : p;
+          })
+        );
+      }
+
+      if (userRoleRef.current === 'player') {
+        setPlayerRoundEndWord(detail?.word || '');
+      }
     };
 
-    const handleRoundEnd = () => {
-      if (userRoleRef.current !== 'host' || maxRoundsRef.current <= 0) return;
-      roundsPlayedRef.current += 1;
-      if (roundsPlayedRef.current >= maxRoundsRef.current) finishGame();
+    const handleGameOver = (e: Event) => {
+      const detail = (e as CustomEvent<{ leaderboard?: FinalResultPlayer[] }>).detail;
+      setIsRoundActive(false);
+      setPlayerRoundEndWord(null);
+
+      if (detail?.leaderboard && Array.isArray(detail.leaderboard)) {
+        setConnectedPlayers((prev) =>
+          prev.map((p) => {
+            const entry = detail.leaderboard!.find((item) => item.nickname === p.nickname);
+            return entry ? { ...p, points: entry.score } : p;
+          })
+        );
+      }
+
+      setCurrentView(userRoleRef.current === 'host' ? 'hostResults' : 'playerRoom');
+    };
+
+    const handleBackToLobbyEvent = () => {
+      setCurrentRound(1);
+      setChatMessages([]);
+      setCurrentDrawer(null);
+      setWordOptions([]);
+      setIsRoundActive(false);
+      setRoundTimeLeft(0);
+      setPlayerRoundEndWord(null);
+      setConnectedPlayers((prev) =>
+        prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+      );
+      setCurrentView(userRoleRef.current === 'host' ? 'host' : 'playerRoom');
+    };
+
+    const handleDrawerQuit = (e: Event) => {
+      const detail = (e as CustomEvent<{ nickname?: string }>).detail;
+      showNotice(`Rysownik ${detail?.nickname || ''} opuścił pokój.`, {
+        title: 'Koniec rundy',
+        type: 'info',
+      });
+    };
+
+    const handlePlayerClose = (e: Event) => {
+      const detail = (e as CustomEvent<{ playerNick?: string }>).detail;
+      if (!detail?.playerNick || detail.playerNick === playerNicknameRef.current) return;
+      showNotice(`Gracz ${detail.playerNick} opuścił pokój.`, {
+        title: 'Gracz wyszedł',
+        type: 'info',
+      });
     };
 
     window.addEventListener('round-end', handleRoundEnd);
-    window.addEventListener('game-over', finishGame);
+    window.addEventListener('game-over', handleGameOver);
+    window.addEventListener('back-to-lobby', handleBackToLobbyEvent);
+    window.addEventListener('drawer-quit', handleDrawerQuit);
+    window.addEventListener('player-close', handlePlayerClose);
     return () => {
-      window.clearTimeout(timer);
       window.removeEventListener('round-end', handleRoundEnd);
-      window.removeEventListener('game-over', finishGame);
+      window.removeEventListener('game-over', handleGameOver);
+      window.removeEventListener('back-to-lobby', handleBackToLobbyEvent);
+      window.removeEventListener('drawer-quit', handleDrawerQuit);
+      window.removeEventListener('player-close', handlePlayerClose);
     };
   }, []);
 
   useEffect(() => {
     const handleChooseWord = (e: any) => {
       roundStartedRef.current = false;
-      setCurrentDrawer(playerData?.nickname || 'Ja'); 
-      setWordOptions(e.detail || []); 
-      setIsRoundActive(false); 
-      // RESET RUNDY (Czyścimy czat i status odgadnięcia przy nowym słowie)
+      setPlayerRoundEndWord(null);
+      setCurrentDrawer(playerData?.nickname || 'Ja');
+      setWordOptions(e.detail || []);
+      setIsRoundActive(false);
+      setCurrentRound((prev) => prev + 1);
       setChatMessages([]);
-      setConnectedPlayers(prev => prev.map(p => ({ ...p, isGuessed: false })));
+      setConnectedPlayers((prev) => prev.map((p) => ({ ...p, isGuessed: false })));
     };
 
     const handleWaitingForWord = (e: any) => {
       roundStartedRef.current = false;
-      setCurrentDrawer(e.detail);
+      setPlayerRoundEndWord(null);
+      if (e.detail) {
+        setCurrentDrawer(e.detail);
+      }
       setWordOptions([]);
       setIsRoundActive(false);
-      // RESET RUNDY
+      setCurrentRound((prev) => prev + 1);
       setChatMessages([]);
-      setConnectedPlayers(prev => prev.map(p => ({ ...p, isGuessed: false })));
+      setConnectedPlayers((prev) => prev.map((p) => ({ ...p, isGuessed: false })));
     };
 
     const handleTimeLeft = (e: any) => {
-      // Dźwięki tylko na ekranie hosta: start rundy i tykanie w ostatnich 10 s
-      if (userRoleRef.current === 'host') {
-        if (!roundStartedRef.current) playSound('start');
-        else if (e.detail > 0 && e.detail <= 10) playSound('tick');
+      if (!roundStartedRef.current) {
+        setChatMessages([]);
+        setConnectedPlayers((prev) => prev.map((p) => ({ ...p, isGuessed: false })));
+        if (userRoleRef.current === 'host') playSound('start');
+      } else if (userRoleRef.current === 'host' && e.detail > 0 && e.detail <= 10) {
+        playSound('tick');
       }
       roundStartedRef.current = true;
       setRoundTimeLeft(e.detail);
       setIsRoundActive(true);
     };
 
-    // Obsługa nietrafionych haseł
     const handleGuessMiss = (e: any) => {
-      setChatMessages(prev => [...prev, { id: Date.now(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'miss' }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now() + Math.random(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'miss' },
+      ]);
     };
+
     const handleGuessAlmost = (e: any) => {
-      setChatMessages(prev => [...prev, { id: Date.now(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'almost' }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now() + Math.random(), nickname: e.detail.nickname, text: e.detail.guessWord, type: 'almost' },
+      ]);
     };
 
     window.addEventListener('choose-word', handleChooseWord);
@@ -150,7 +217,17 @@ export function App() {
 
   const handleLobbyUpdate = useCallback(
     (players: PlayerInfo[]) => {
-      setConnectedPlayers(players);
+      setConnectedPlayers((prev) =>
+        players.map((sp) => {
+          const existing = prev.find((p) => p.nickname === sp.nickname);
+          return {
+            ...sp,
+            avatar: sp.avatar || existing?.avatar || '',
+            isGuessed: existing?.isGuessed ?? false,
+            isDrawer: existing?.isDrawer ?? false,
+          };
+        })
+      );
       setCurrentView((prevView) => {
         if (prevView === 'player' && roomCode) {
           window.history.pushState({}, '', `/room?id=${roomCode}`);
@@ -163,22 +240,46 @@ export function App() {
   );
 
   const handleGameStarted = useCallback(() => {
+    setCurrentRound(0);
+    setPlayerRoundEndWord(null);
+    setChatMessages([]);
+    setConnectedPlayers((prev) =>
+      prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+    );
     setCurrentView(userRole === 'host' ? 'hostGame' : 'playerGuess');
   }, [userRole]);
 
-  const handlePlayerGuessed = useCallback((nickname: string, earnedPoints: number) => {
-    // Host słyszy każde trafienie, gracz tylko własne
-    if (userRoleRef.current === 'host' || nickname === playerNicknameRef.current) {
-      playSound('correct');
-    }
-    setConnectedPlayers((prev) =>
-      prev.map((p) =>
-        p.nickname === nickname
-          ? { ...p, isGuessed: true, points: p.points + earnedPoints }
-          : p
-      )
-    );
-    setChatMessages((prev) => [...prev, { id: Date.now(), nickname, text: 'Odgadł(a) hasło!', type: 'correct' }]);
+  const handlePlayerGuessed = useCallback(
+    (nickname: string, earnedPoints: number, totalPoints?: number) => {
+      if (userRoleRef.current === 'host' || nickname === playerNicknameRef.current) {
+        playSound('correct');
+      }
+      setConnectedPlayers((prev) =>
+        prev.map((p) =>
+          p.nickname === nickname
+            ? {
+                ...p,
+                isGuessed: true,
+                points: typeof totalPoints === 'number' ? totalPoints : p.points + earnedPoints,
+              }
+            : p
+        )
+      );
+      setChatMessages((prev) => [
+        ...prev,
+        { id: Date.now() + Math.random(), nickname, text: 'Odgadł(a) hasło!', type: 'correct' },
+      ]);
+    },
+    []
+  );
+
+  const handleLeaveRoom = useCallback(() => {
+    closeSocket();
+    window.history.pushState({}, '', '/');
+    setRoomCode(null);
+    setUserRole(null);
+    setConnectedPlayers([]);
+    setCurrentView('menu');
   }, []);
 
   const { sendPacket, closeSocket } = useGameSocket({
@@ -189,7 +290,21 @@ export function App() {
     onGameStarted: handleGameStarted,
     onPlayerGuessed: handlePlayerGuessed,
     onRoomError: (code, message) => {
-      showNotice(message, { title: 'Odłączono' });
+      if (code === 'HOST_LEFT') {
+        closeSocket();
+        window.history.pushState({}, '', '/');
+        setRoomCode(null);
+        setUserRole(null);
+        setConnectedPlayers([]);
+        setCurrentView('menu');
+        showNotice(message, { title: 'Pokój zamknięty', type: 'info' });
+        return;
+      }
+
+      showNotice(message, {
+        title: code === 'NOT_ENOUGH_PLAYERS' ? 'Koniec gry' : 'Uwaga!',
+        type: code === 'NOT_ENOUGH_PLAYERS' ? 'info' : 'error',
+      });
       if (code === 'ROOM_NOT_FOUND' || code === 'ROOM_EXISTS') {
         closeSocket();
         setRoomCode(null);
@@ -210,48 +325,41 @@ export function App() {
   };
 
   const handleStartGame = (settings: GameSettings) => {
-    // customWords to dane tylko dla frontendu – serwer dostaje dotychczasowy pakiet
     const { customWords, ...packet } = settings;
     setLastSettings({
       maxRounds: settings.maxRounds,
       roundTime: settings.roundTime,
       customWords: customWords ?? [],
     });
-    roundsPlayedRef.current = 0;
-    maxRoundsRef.current = settings.maxRounds;
+    setMaxRounds(settings.maxRounds);
+    setCurrentRound(0);
+    setChatMessages([]);
+    setConnectedPlayers((prev) =>
+      prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+    );
     sendPacket('START_GAME', packet);
   };
 
-  // Ekran wyników → ustawienia pokoju (można zacząć jeszcze raz)
   const handleBackToLobby = () => {
-    roundsPlayedRef.current = 0;
+    sendPacket('BACK_TO_LOBBY', {});
+    setCurrentRound(1);
     setChatMessages([]);
     setCurrentDrawer(null);
     setWordOptions([]);
     setIsRoundActive(false);
     setRoundTimeLeft(0);
+    setPlayerRoundEndWord(null);
     setConnectedPlayers((prev) =>
       prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
     );
     setCurrentView('host');
   };
 
-  const handleLeaveRoom = () => {
-    closeSocket();
-    window.history.pushState({}, '', '/');
-    setRoomCode(null);
-    setUserRole(null);
-    setConnectedPlayers([]);
-    setCurrentView('menu');
-  };
-
-  // Host usuwa gracza z lobby (serwer powinien rozłączyć gracza i wysłać KICKED)
   const handleKickPlayer = (nickname: string) => {
     sendPacket('KICK_PLAYER', { nickname });
     setConnectedPlayers((prev) => prev.filter((p) => p.nickname !== nickname));
   };
 
-  // Gracz dostał informację, że host go usunął
   useEffect(() => {
     const handleKicked = () => {
       if (userRoleRef.current !== 'player') return;
@@ -260,9 +368,10 @@ export function App() {
     };
     window.addEventListener('kicked', handleKicked);
     return () => window.removeEventListener('kicked', handleKicked);
-  }, []);
+  }, [handleLeaveRoom]);
 
-  const hasLocalPlayerGuessed = connectedPlayers.find(p => p.nickname === playerData?.nickname)?.isGuessed || false;
+  const hasLocalPlayerGuessed =
+    connectedPlayers.find((p) => p.nickname === playerData?.nickname)?.isGuessed || false;
 
   return (
     <>
@@ -316,8 +425,17 @@ export function App() {
       )}
 
       {currentView === 'playerGuess' && playerData && roomCode && (
-        !currentDrawer ? (
-
+        playerRoundEndWord !== null ? (
+          <div className="menu player-screen" style={{ textAlign: 'center', padding: '40px' }}>
+            <h2>Koniec rundy!</h2>
+            <p style={{ fontSize: '24px', margin: '16px 0' }}>
+              Hasło to: <strong style={{ color: '#ffd800' }}>{playerRoundEndWord}</strong>
+            </p>
+            <p style={{ color: '#aaa', fontSize: '18px' }}>
+              Oczekiwanie na rozpoczęcie kolejnej rundy przez Hosta...
+            </p>
+          </div>
+        ) : !currentDrawer ? (
           <div className="menu" style={{ textAlign: 'center', padding: '40px' }}>
             <h2>Ładowanie rundy...</h2>
             <p style={{ color: '#aaa', fontSize: '20px', marginTop: '15px' }}>
@@ -351,6 +469,8 @@ export function App() {
           isRoundActive={isRoundActive}
           timeLeft={roundTimeLeft}
           chatMessages={chatMessages}
+          currentRound={Math.max(1, currentRound)}
+          maxRounds={maxRounds}
           sendPacket={sendPacket}
           onLeave={handleLeaveRoom}
         />
@@ -362,7 +482,6 @@ export function App() {
 
       {userRole === 'host' && currentView !== 'menu' && <SoundToggle />}
 
-      {/* Okno komunikatów (zamiast alert()) – musi być zamontowane raz, na wierzchu */}
       <NoticeHost />
     </>
   );

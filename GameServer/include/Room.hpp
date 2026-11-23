@@ -32,6 +32,10 @@ public:
     // Handling room
     void setupRoom(const json &packet);
 
+    void onHostDisconnect();
+
+    bool kickPlayer(std::string_view nickname);
+
     // Handling players
     void addPlayer(crow::websocket::connection &conn, std::string_view playerName);
 
@@ -68,7 +72,9 @@ public:
     void nextRound();
 
     // Getters
-    std::vector<Player> getPlayers() const;
+    std::vector<Player> &getPlayers();
+
+    const std::vector<Player> &getPlayers() const;
 
     Player *getCurrentDrawer();
 
@@ -135,6 +141,8 @@ private:
     void initWordPool(std::vector<std::string> words);
 
     void roundCountdownWorker(const std::stop_token &stoken, int seconds);
+
+    void removePlayerAt(size_t idx);
 };
 
 #endif //GAMESERVER_ROOM_HPP

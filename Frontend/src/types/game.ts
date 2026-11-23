@@ -34,3 +34,17 @@ export interface ChatMessage {
   text: string;
   type: 'miss' | 'almost' | 'correct';
 }
+
+export interface RoundResultPlayer {
+  nickname: string;
+  avatar?: string;
+  score: number;
+  roundScore: number;
+}
+
+export interface FinalResultPlayer {
+  place: number;
+  nickname: string;
+  avatar?: string;
+  score: number;
+}

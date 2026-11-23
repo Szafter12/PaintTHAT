@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import type { SendPacketFn } from '../types/websocket';
+import type { DrawPoint, SendPacketFn } from '../types/websocket';
 import '../styles/menu.css';
 import '../styles/game.css';
 
@@ -20,15 +20,26 @@ const PALETTE = [
 
 export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: PlayerDrawViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  
-  const isDrawingRef = useRef(false);
+  const lastLocalPosRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingPointsRef = useRef<DrawPoint[]>([]);
+  const lastSendTimeRef = useRef<number>(0);
+  const activePointerIdRef = useRef<number | null>(null);
+
   const [color, setColor] = useState('#000000');
   const [size, setSize] = useState(5);
   const [isEraser, setIsEraser] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string>('');
 
-  // Na telefonie blokujemy „pull to refresh” i przewijanie strony podczas rysowania.
+  useEffect(() => {
+    if (!isRoundActive) {
+      setSelectedWord('');
+      activePointerIdRef.current = null;
+      pendingPointsRef.current = [];
+      lastLocalPosRef.current = null;
+    }
+  }, [wordOptions, isRoundActive]);
+
   useEffect(() => {
     if (!isRoundActive) return;
     const prev = document.body.style.overscrollBehavior;
@@ -38,35 +49,88 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     };
   }, [isRoundActive]);
 
-  const draw = (x: number, y: number) => {
-    if (!canvasRef.current || !lastPosRef.current) return;
+  const flushBatch = () => {
+    const pts = pendingPointsRef.current;
+    if (pts.length < 2) return;
+
+    const first = pts[0];
+    const last = pts[pts.length - 1];
+
+    sendPacket('DRAW_BROADCAST', {
+      prevX: first.x,
+      prevY: first.y,
+      x: last.x,
+      y: last.y,
+      color,
+      size,
+      isEraser,
+      points: [...pts],
+    });
+
+    pendingPointsRef.current = [last];
+    lastSendTimeRef.current = performance.now();
+  };
+
+  const getPointerPos = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const rawY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    return {
+      x: Math.max(0, Math.min(canvas.width, rawX)),
+      y: Math.max(0, Math.min(canvas.height, rawY)),
+    };
+  };
+
+  const startDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (activePointerIdRef.current !== null) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const prevX = lastPosRef.current.x;
-    const prevY = lastPosRef.current.y;
+    activePointerIdRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
 
-    // Normalizacja do 0.0 - 1.0 dla C++
-    const normX = x / canvas.width;
-    const normY = y / canvas.height;
-    const normPrevX = prevX / canvas.width;
-    const normPrevY = prevY / canvas.height;
+    const pos = getPointerPos(e);
+    lastLocalPosRef.current = pos;
 
-    sendPacket('DRAW_BROADCAST', { 
-      x: normX, 
-      y: normY, 
-      prevX: normPrevX, 
-      prevY: normPrevY, 
-      color, 
-      size, 
-      isEraser 
-    });
+    ctx.save();
+    if (isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000000';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = color;
+    }
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-    // Rysowanie na własnym telefonie
+    const normPt: DrawPoint = {
+      x: Number((pos.x / canvas.width).toFixed(4)),
+      y: Number((pos.y / canvas.height).toFixed(4)),
+    };
+    pendingPointsRef.current = [normPt, normPt];
+    flushBatch();
+  };
+
+  const drawMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerId !== activePointerIdRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas || !lastLocalPosRef.current) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const pos = getPointerPos(e);
+    const prev = lastLocalPosRef.current;
+
     ctx.lineWidth = size;
     ctx.lineCap = 'round';
-    
+    ctx.lineJoin = 'round';
+
     if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
     } else {
@@ -75,50 +139,35 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     }
 
     ctx.beginPath();
-    ctx.moveTo(prevX, prevY);
-    ctx.lineTo(x, y);
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
 
-    lastPosRef.current = { x, y };
+    lastLocalPosRef.current = pos;
+
+    pendingPointsRef.current.push({
+      x: Number((pos.x / canvas.width).toFixed(4)),
+      y: Number((pos.y / canvas.height).toFixed(4)),
+    });
+
+    if (performance.now() - lastSendTimeRef.current >= 25) {
+      flushBatch();
+    }
   };
 
-  const getPointerPos = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  };
-
-  // Pointer Events: jedna obsługa dla palca, rysika i myszy.
-  // setPointerCapture – linia nie urywa się, gdy palec wyjedzie poza płótno.
-  const startDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    isDrawingRef.current = true;
-    const pos = getPointerPos(e);
-    lastPosRef.current = pos;
-    draw(pos.x, pos.y);
-  };
-
-  const drawMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return;
-    const pos = getPointerPos(e);
-    draw(pos.x, pos.y);
-  };
-
-  const stopDrawing = () => {
-    isDrawingRef.current = false;
-    lastPosRef.current = null;
+  const stopDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerId !== activePointerIdRef.current) return;
+    flushBatch();
+    activePointerIdRef.current = null;
+    lastLocalPosRef.current = null;
+    pendingPointsRef.current = [];
   };
 
   const handleClear = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    // Host dostaje sygnał jako zwykły DRAW_BROADCAST z x = y = -1 (serwer go przekazuje),
-    // dodatkowo wysyłamy osobny pakiet CLEAR_CANVAS na wypadek, gdyby serwer go obsługiwał.
+    pendingPointsRef.current = [];
     sendPacket('DRAW_BROADCAST', {
       x: -1, y: -1, prevX: -1, prevY: -1,
       color: '#000000', size: 1, isEraser: false,
@@ -126,30 +175,30 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     sendPacket('CLEAR_CANVAS', {});
   };
 
-  // ---------------------------------------------------------
-  // EKRAN WYBORU SŁOWA (Przed startem rysowania)
-  // ---------------------------------------------------------
+  const handlePickWord = (word: string) => {
+    setSelectedWord(word);
+    sendPacket('PICKED_WORD', { guessWord: word });
+  };
+
   if (!isRoundActive) {
     return (
       <div className="menu player-screen">
         <h2>Wybierz hasło:</h2>
-        
+
         <div className="word-choice">
-          {/* Zabezpieczenie przed brakiem danych z C++ */}
           {wordOptions && wordOptions.length > 0 ? (
             wordOptions.map((word, index) => (
-              <button 
-                key={index} 
+              <button
+                key={index}
                 className="word-btn"
-                onClick={() => sendPacket('PICKED_WORD', { guessWord: word })}
+                onClick={() => handlePickWord(word)}
               >
                 {word}
               </button>
             ))
           ) : (
             <p className="empty-text">
-              Oczekiwanie na słowa od serwera... 
-              (Jeśli to trwa długo, upewnij się, że serwer wysłał tablicę słów w pakiecie CHOOSE_WORD).
+              Oczekiwanie na słowa od serwera...
             </p>
           )}
         </div>
@@ -157,12 +206,8 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     );
   }
 
-  // ---------------------------------------------------------
-  // EKRAN RYSOWANIA (Aktywuje się, gdy C++ zacznie odliczać czas)
-  // ---------------------------------------------------------
   return (
     <div className="draw-screen">
-      {/* Widoczne tylko na wąskim ekranie w pionie (patrz CSS) */}
       {!hintDismissed && (
         <div className="rotate-hint">
           <span>📱 Obróć telefon poziomo – będziesz mieć większe płótno</span>
@@ -170,12 +215,32 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
         </div>
       )}
 
+      <div
+        style={{
+          background: 'rgba(0, 0, 0, 0.75)',
+          border: '2px solid #ff0055',
+          borderRadius: '10px',
+          padding: '8px 18px',
+          marginBottom: '8px',
+          color: '#fff',
+          fontSize: '18px',
+          textAlign: 'center',
+          fontWeight: 'bold',
+        }}
+      >
+        Hasło do narysowania:{' '}
+        <span style={{ color: '#ffd800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          {selectedWord || '—'}
+        </span>
+      </div>
+
       <div className="canvas-frame draw-canvas-frame">
         <canvas
           ref={canvasRef}
           width={800}
           height={600}
           className="game-canvas"
+          style={{ touchAction: 'none' }}
           onPointerDown={startDrawing}
           onPointerMove={drawMove}
           onPointerUp={stopDrawing}
@@ -194,7 +259,6 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
               onClick={() => { setColor(c); setIsEraser(false); }}
             />
           ))}
-          {/* Własny kolor – systemowy wybierak */}
           <label
             className={`swatch custom ${!isEraser && !PALETTE.includes(color) ? 'selected' : ''}`}
             aria-label="Własny kolor"

@@ -32,6 +32,7 @@ int main() {
                     if (roomIt != rooms.end()) {
                         if (roomIt->second->getHostConn() == &conn) {
                             std::cout << "Host exit. Remove room: " << PIN << "\n";
+                            roomIt->second->onHostDisconnect();
                             rooms.erase(roomIt);
                         } else {
                             std::cout << "Player disconnect: " << PIN << "\n";

@@ -9,7 +9,6 @@ interface HostResultsViewProps {
   onBack: () => void;
 }
 
-// Kolejność kolumn na podium: 2. miejsce – 1. miejsce – 3. miejsce (jak na makiecie)
 const PODIUM_SLOTS = [
   { place: 2, cls: 'second' },
   { place: 1, cls: 'first' },
@@ -19,7 +18,6 @@ const PODIUM_SLOTS = [
 export function HostResultsView({ players, onBack }: HostResultsViewProps) {
   const ranking = [...players].sort((a, b) => b.points - a.points);
 
-  // Fanfara w momencie, gdy podium jest już „wyrośnięte”
   useEffect(() => {
     const t = window.setTimeout(() => playSound('fanfare'), 1200);
     return () => window.clearTimeout(t);
@@ -51,7 +49,7 @@ export function HostResultsView({ players, onBack }: HostResultsViewProps) {
         </section>
 
         <section className="panel results-panel">
-          <h2>Wyniki:</h2>
+          <h2>Wyniki końcowe:</h2>
           <ol className="results-list">
             {ranking.map((player, index) => (
               <li
@@ -68,7 +66,12 @@ export function HostResultsView({ players, onBack }: HostResultsViewProps) {
             ))}
           </ol>
 
-          <button className="return-button results-return" onClick={onBack} />
+          <button
+            className="return-button results-return"
+            onClick={onBack}
+            title="Powrót do lobby"
+            aria-label="Powrót do lobby"
+          />
         </section>
       </main>
     </div>

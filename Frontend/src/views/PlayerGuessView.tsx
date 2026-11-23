@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { SendPacketFn } from '../types/websocket';
 import '../styles/menu.css';
@@ -13,10 +13,37 @@ interface PlayerGuessViewProps {
 
 export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, sendPacket }: PlayerGuessViewProps) {
   const [guess, setGuess] = useState('');
+  const [almostWord, setAlmostWord] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isRoundActive || hasGuessed) {
+      setAlmostWord(null);
+    }
+  }, [isRoundActive, hasGuessed]);
+
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const handleAlmost = (e: Event) => {
+      const detail = (e as CustomEvent<{ nickname?: string; guessWord?: string }>).detail;
+      setAlmostWord(detail?.guessWord || '');
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        setAlmostWord(null);
+      }, 4000);
+    };
+
+    window.addEventListener('guess-almost', handleAlmost);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('guess-almost', handleAlmost);
+    };
+  }, []);
 
   const submitGuess = () => {
     const trimmed = guess.trim();
     if (trimmed) {
+      setAlmostWord(null);
       sendPacket('SUBMIT_GUESS', { guess: trimmed });
       setGuess('');
     }
@@ -37,7 +64,6 @@ export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, send
     );
   }
 
-  // Ekran sukcesu
   if (hasGuessed) {
     return (
       <div className="menu player-screen guess-success">
@@ -52,22 +78,40 @@ export function PlayerGuessView({ currentDrawer, isRoundActive, hasGuessed, send
   return (
     <div className="menu player-screen">
       <h3 className="muted">Obecnie rysuje: {currentDrawer}</h3>
-      
+
+      {almostWord !== null && (
+        <div
+          role="status"
+          style={{
+            backgroundColor: 'rgba(255, 193, 7, 0.18)',
+            border: '2px solid #ffc107',
+            color: '#ffd54f',
+            borderRadius: '12px',
+            padding: '12px 20px',
+            marginBottom: '16px',
+            fontSize: '20px',
+            fontWeight: 'bold',
+          }}
+        >
+          🔥 Prawie zgadłeś! {almostWord ? `„${almostWord}” jest bardzo blisko!` : 'Jesteś bardzo blisko!'}
+        </div>
+      )}
+
       <div className="control-group">
         <label htmlFor="guess-input">Zgadnij hasło:</label>
-        <input 
+        <input
           id="guess-input"
-          type="text" 
-          className="game-input wide" 
-          placeholder="Wpisz hasło..." 
+          type="text"
+          className="game-input wide"
+          placeholder="Wpisz hasło..."
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           onKeyDown={handleKeyDown}
           autoComplete="off"
         />
       </div>
-      <button 
-        className="start-button guess-submit" 
+      <button
+        className="start-button guess-submit"
         onClick={submitGuess}
       ></button>
     </div>
