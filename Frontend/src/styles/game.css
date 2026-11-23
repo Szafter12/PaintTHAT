@@ -1,0 +1,1009 @@
+/* =========================================================
+   game.css – wspólne style widoków gry (host + gracz)
+   Korzysta z: --border-img (assets.css), czcionki z tekst.css,
+   czarnego tła z menu.css / host.css
+   ========================================================= */
+
+:root {
+  --accent: #ff0055;
+  --accent-ok: #00ff00;
+  --accent-warn: #ffcc00;
+  --accent-danger: #ff3b3b;
+  --text-muted: #aaa;
+}
+
+/* ---------- Pikselowa ramka (jak .panel / .game-input) ---------- */
+.pixel-frame,
+.game-btn,
+.chat-box,
+.canvas-frame,
+.scoreboard,
+.word-btn {
+  border: 10px solid transparent;
+  border-image-source: var(--border-img);
+  border-image-slice: 30;
+  border-image-repeat: stretch;
+  background-color: #000;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+/* ---------- Awatary ---------- */
+.avatar {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.avatar-round {
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.avatar-round.sm { width: 35px; height: 35px; }
+.avatar-round.md { width: 40px; height: 40px; }
+.avatar-round.lg { width: 50px; height: 50px; flex-shrink: 0; }
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 28px;
+}
+
+/* ---------- Przyciski tekstowe (gdzie nie ma grafiki GIF) ---------- */
+.game-btn {
+  padding: 4px 18px;
+  min-height: 56px;
+  font-size: 26px;
+  cursor: pointer;
+  transition: color 0.1s, transform 0.1s;
+}
+
+.game-btn:hover {
+  color: var(--accent);
+}
+
+.game-btn.active {
+  color: var(--accent);
+  background-color: #330011;
+}
+
+.game-btn.danger {
+  color: var(--accent-danger);
+}
+
+/* ---------- Wyłączone przyciski graficzne ---------- */
+.start-button:disabled,
+.signin-button:disabled,
+.signup-button:disabled {
+  opacity: 0.4;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.start-button:disabled:hover {
+  background-image: var(--start-img);
+}
+
+/* ---------- Menu: formularze logowania ---------- */
+.auth-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.auth-section .menu-buttons {
+  margin-top: 10px;
+}
+
+.game-input.wide {
+  width: 100%;
+}
+
+/* ---------- Teksty pomocnicze ---------- */
+.accent { color: var(--accent); }
+.hint-text { font-size: 18px; color: var(--text-muted); margin-top: 10px; }
+.empty-text { font-size: 22px; color: gray; }
+.loading-text { font-size: 22px; color: var(--accent-warn); margin-top: 10px; }
+
+/* =========================================================
+   HOST – LOBBY
+   ========================================================= */
+.host-logo {
+  width: 200px;
+  height: 50px;
+  background-image: var(--logo-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: left center;
+}
+
+.avatar-round.host-avatar { width: 35px; height: 35px; }
+
+.panel h2 { font-size: 40px; }
+.panel h3 { font-size: 30px; margin-top: 20px; }
+.panel .control-group { margin-left: 0; margin-right: 0; }
+
+.add-word-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.add-word-row .game-input { flex: 1; width: auto; }
+
+.word-list {
+  margin-top: 10px;
+  font-size: 24px;
+  color: #fff;
+}
+
+.word-list li::before {
+  content: '• ';
+  color: var(--accent);
+}
+
+.players-list {
+  margin: 15px 0;
+  width: 100%;
+  min-height: 80px;
+}
+
+.lobby-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 26px;
+  color: #fff;
+}
+
+.start-button.lobby-start { margin-top: 20px; }
+
+/* =========================================================
+   HOST – EKRAN GRY
+   Wszystko mieści się w oknie bez przewijania: pasek + płótno 4:3 skalują się
+   do dostępnego miejsca, a ostatnie słowo gracza jest w tabeli wyników.
+   ========================================================= */
+.game-host {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.game-host-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.game-stage {
+  flex: 1;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* 85px = pasek 70px + odstęp 10px + 5px na ramkę płótna */
+.game-stage-inner {
+  width: min(100cqw, calc((100cqh - 85px) * 4 / 3));
+}
+
+.game-stage-inner .canvas-frame { max-width: none; }
+
+.game-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  height: 70px;
+  margin-bottom: 10px;
+}
+
+.game-status {
+  min-width: 0;
+  font-size: 36px;
+  line-height: 1.1;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-timer {
+  flex-shrink: 0;
+  font-size: 48px;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.game-timer.low { color: red; }
+
+.canvas-frame {
+  width: 100%;
+  max-width: 1000px;
+}
+
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+  touch-action: none;
+}
+
+.scoreboard {
+  width: clamp(380px, 32vw, 520px);
+  flex-shrink: 0;
+  margin: 20px 20px 20px 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.scoreboard-title { font-size: 34px; color: var(--accent); }
+.score-list { margin-top: 20px; }
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #111;
+}
+
+.score-item.guessed { background: rgba(0, 255, 0, 0.2); }
+
+.score-info { flex: 0 0 120px; min-width: 0; }
+
+.score-nick {
+  font-size: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score-points { font-size: 22px; color: var(--text-muted); }
+
+/* Ostatnie słowo wpisane przez gracza */
+.score-last-word {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 6px 12px;
+  line-height: 44px;
+  border-radius: 10px;
+  background: #050505;
+  font-size: 24px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score-last-word.almost { color: var(--accent-warn); }
+.score-last-word.correct { color: var(--accent-ok); }
+
+@media (max-width: 800px) {
+  .game-host { height: auto; min-height: 100vh; overflow: visible; }
+  .game-stage { flex: none; container-type: normal; }
+  .game-stage-inner { width: 100%; }
+  .game-topbar { height: auto; min-height: 50px; }
+}
+
+/* =========================================================
+   GRACZ – wspólne
+   ========================================================= */
+.player-screen {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.player-screen h2 { font-size: 40px; }
+.player-screen .drawer-name { font-size: 28px; color: var(--accent); margin: 20px 0; }
+.player-screen .muted { color: var(--text-muted); font-size: 24px; }
+
+.room-title { font-size: 56px; color: var(--accent); margin: 20px 0; }
+.room-info { font-size: 26px; color: #ccc; }
+.room-leave { margin-top: 30px; }
+
+.menu.guess-success { background-color: rgba(0, 255, 0, 0.1); }
+.success-title { font-size: 48px; color: var(--accent-ok); margin-bottom: 20px; }
+.success-text { font-size: 26px; color: #fff; }
+
+.guess-submit { margin-top: 20px; }
+
+/* ---------- Wybór hasła ---------- */
+.word-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 20px;
+}
+
+.word-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 30px;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.word-btn:hover { color: var(--accent); }
+
+/* ---------- Rysowanie (telefon) ----------
+   Pionowo: płótno 4:3 na górze, narzędzia pod kciukiem.
+   Poziomo: narzędzia w kolumnie po lewej, płótno wypełnia wysokość ekranu. */
+.draw-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #000;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.draw-canvas-frame {
+  width: 100%;
+  max-width: 800px;
+  border-width: 6px;
+  flex-shrink: 0;
+}
+
+.draw-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
+}
+
+.swatch {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid #555;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.1);
+}
+
+.swatch.custom {
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  overflow: hidden;
+}
+
+.swatch.custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.size-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.size-preview {
+  flex: 0 0 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #555;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.size-preview span {
+  display: block;
+  border-radius: 50%;
+  border: 1px solid #888;
+  box-sizing: border-box;
+}
+
+.size-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;               /* duży obszar dotyku */
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tool-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.tool-buttons .game-btn {
+  flex: 1;
+  min-height: 52px;
+  font-size: 24px;
+}
+
+/* Telefon poziomo (lub niski ekran): narzędzia z boku */
+@media (orientation: landscape) and (max-height: 600px) {
+  .draw-screen {
+    flex-direction: row-reverse;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .draw-canvas-frame {
+    flex: 1 1 0;
+    width: auto;
+    /* wysokość ekranu − padding − ramka, przeliczona na szerokość 4:3 */
+    max-width: calc((100dvh - 16px - 12px) * 4 / 3 + 12px);
+  }
+
+  .draw-tools {
+    flex: 0 0 210px;
+    width: 210px;
+    max-height: 100%;
+    overflow-y: auto;
+    gap: 10px;
+  }
+
+  .palette { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tool-buttons { flex-direction: column; gap: 8px; }
+  .tool-buttons .game-btn { min-height: 44px; font-size: 22px; }
+}
+
+/* =========================================================
+   MENU – wybór logowania hosta (Sign in / Sign up)
+   Środek: [ przyciski ]  [ avatar albo formularz ]   (wyśrodkowane)
+   Logo – lewy górny róg, powrót – lewy dolny róg (oba małe, na sztywno)
+   ========================================================= */
+.host-choice {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  padding: 120px 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 180px;                 /* odległość przyciski ↔ avatar/formularz */
+  background-color: #000;
+}
+
+.host-choice-logo {
+  position: absolute;
+  top: 30px;
+  left: 50px;
+  width: 95px;                /* rozmiar logo */
+  height: auto;
+}
+
+.host-choice-buttons {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.host-choice-buttons .signin-button,
+.host-choice-buttons .signup-button {
+  width: 240px;               /* rozmiar przycisków Sign in / Sign up */
+  height: 120px;
+}
+
+.host-choice-content {
+  flex: 0 1 560px;            /* stała szerokość: avatar ↔ formularz nie przesuwa przycisków */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.host-choice-content .avatar-selection {
+  width: auto;
+  margin: 0;
+}
+
+.return-button.host-choice-return {
+  position: absolute;
+  left: 50px;
+  bottom: 30px;
+  width: 80px;                /* rozmiar przycisku powrotu w rogu */
+  height: 40px;
+}
+
+/* Formularz: etykiety w jednej kolumnie, pola tej samej szerokości */
+.host-choice-content .auth-section { width: 100%; }
+
+.host-choice-content .control-group {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  align-items: center;
+  column-gap: 16px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 22px;
+}
+
+.host-choice-content .control-group label {
+  margin: 0;
+  text-align: right;
+}
+
+.host-choice-content .control-group .game-input { width: 100%; }
+
+.host-choice-content .auth-section .menu-buttons {
+  margin-top: 14px;
+  gap: 60px;
+  align-items: center;
+}
+
+/* Wybrany przycisk zostaje „podświetlony” – ta sama grafika co przy najechaniu */
+.signin-button.active { background-image: var(--signin-hover-img); }
+.signup-button.active { background-image: var(--signup-hover-img); }
+
+@media (max-width: 1100px) {
+  .host-choice { gap: 60px; }
+}
+
+@media (max-width: 900px) {
+  .host-choice {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 24px;
+    padding: 20px 10px;
+  }
+
+  .host-choice-logo,
+  .return-button.host-choice-return { position: static; }
+
+  .host-choice-logo { order: 0; }
+  .host-choice-content { order: 1; width: 100%; flex: 0 0 auto; }
+  .host-choice-buttons { order: 2; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 20px; }
+  .return-button.host-choice-return { order: 3; width: 100px; height: 50px; }
+
+  .host-choice-buttons .signin-button,
+  .host-choice-buttons .signup-button { width: 150px; height: 75px; }
+
+  .host-choice-content .control-group { grid-template-columns: 1fr; margin-bottom: 16px; }
+  .host-choice-content .control-group label { text-align: left; }
+}
+
+/* ---------- Przycisk „Sign in / Sign up with Google” ---------- */
+.google-button {
+  width: 200px;
+  height: 80px;
+  padding: 0 14px;
+  border: 4px solid #fff;
+  border-radius: 50%;          /* owal jak na makiecie */
+  background-color: #000;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.google-button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.google-button:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+/* Trzy przyciski w jednym rzędzie (powrót · Google · Sign in/up) muszą się zmieścić */
+.host-choice-content .auth-section .menu-buttons { gap: 24px; }
+.host-choice-content .auth-section .menu-buttons .return-button { width: 110px; height: 55px; }
+.host-choice-content .auth-section .menu-buttons .signin-button,
+.host-choice-content .auth-section .menu-buttons .signup-button { width: 160px; height: 80px; }
+
+@media (max-width: 600px) {
+  .google-button { width: 150px; height: 64px; font-size: 16px; }
+}
+
+/* =========================================================
+   HOST – LOBBY: kod pokoju + ramka na QR, ekran ustawień
+   ========================================================= */
+.room-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.qr-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 300px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.settings-main {
+  padding: 20px 30px;
+  width: 100%;
+  min-height: calc(100vh - 80px);
+  box-sizing: border-box;
+}
+
+.panel.settings-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 20px 40px;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.settings-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.settings-column .control-group { max-width: 420px; margin-bottom: 24px; }
+.settings-column .control-group label { display: block; margin: 0 0 8px; }
+.settings-column .add-word-row .game-input { flex: 1; }
+
+.words-frame {
+  flex: 1;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.words-frame h3 { font-size: 22px; margin: 0 0 10px; }
+
+.words-frame .word-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.word-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.word-remove:hover { color: var(--accent-danger); }
+
+.return-button.settings-return {
+  grid-column: 2;
+  justify-self: end;
+  width: 110px;
+  height: 55px;
+}
+
+@media (max-width: 800px) {
+  .panel.settings-panel { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .return-button.settings-return { grid-column: 1; }
+}
+
+/* START w prawym dolnym rogu panelu graczy */
+.right-panel { position: relative; }
+
+.lobby-start-area {
+  margin-top: auto;
+  align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.start-button.lobby-start {
+  margin-top: 0;
+  width: 320px;
+  height: 160px;
+}
+
+@media (max-width: 600px) {
+  .start-button.lobby-start { width: 220px; height: 110px; }
+}
+
+/* =========================================================
+   HOST – EKRAN WYNIKÓW (po ostatniej rundzie)
+   ========================================================= */
+.results-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: end;
+  padding: 20px 40px 40px;
+  min-height: calc(100vh - 100px);
+  box-sizing: border-box;
+}
+
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 24px;
+  min-height: 60vh;
+}
+
+.podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 150px;
+  min-width: 0;
+}
+
+.podium-name {
+  font-size: 30px;
+  margin-bottom: 10px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.podium-slot.first .podium-name { font-size: 38px; color: var(--accent-warn); }
+
+.podium-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 14px;
+  box-sizing: border-box;
+  border: 4px solid #fff;
+  color: #fff;
+}
+
+.podium-slot.first  .podium-bar { height: 300px; background: #d9a400; }
+.podium-slot.second .podium-bar { height: 220px; background: #2d3cc8; }
+.podium-slot.third  .podium-bar { height: 150px; background: #1f9d3a; }
+
+.podium-place { font-size: 52px; line-height: 1; }
+.podium-points { font-size: 30px; margin-top: auto; padding-bottom: 14px; }
+
+.panel.results-panel {
+  position: relative;
+  align-self: stretch;
+  min-height: 60vh;
+  padding-bottom: 90px;
+}
+
+.panel.results-panel h2 { align-self: center; margin-bottom: 10px; }
+
+.results-list {
+  width: 100%;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  overflow-y: auto;
+}
+
+.results-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.results-rank { width: 44px; color: var(--text-muted); }
+.results-list li:first-child .results-rank,
+.results-list li:first-child .results-points { color: var(--accent-warn); }
+.results-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.results-points { color: var(--accent); }
+
+.return-button.results-return {
+  position: absolute;
+  right: 20px;
+  bottom: 14px;
+  width: 110px;
+  height: 55px;
+}
+
+@media (max-width: 900px) {
+  .results-main { grid-template-columns: 1fr; padding: 10px 16px 30px; }
+  .podium { min-height: 0; gap: 12px; }
+  .podium-slot { width: 30%; }
+  .podium-name { font-size: 22px; }
+  .podium-slot.first .podium-name { font-size: 26px; }
+  .podium-slot.first  .podium-bar { height: 220px; }
+  .podium-slot.second .podium-bar { height: 160px; }
+  .podium-slot.third  .podium-bar { height: 110px; }
+  .podium-points { font-size: 22px; }
+}
+
+/* =========================================================
+   ANIMACJE, DŹWIĘK, WYRZUCANIE GRACZY
+   ========================================================= */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes pulse-low {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.18); opacity: 0.55; }
+}
+@keyframes rise {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes guessed-flash {
+  0%   { background: rgba(0, 255, 0, 0.6); transform: scale(1.03); }
+  100% { background: rgba(0, 255, 0, 0.2); transform: scale(1); }
+}
+@keyframes start-flash {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  70%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+/* Timer: ostatnie 10 s pulsuje na czerwono */
+.game-timer.low { animation: pulse-low 1s ease-in-out infinite; }
+
+/* Trafienie hasła na tabeli wyników */
+.score-item.guessed { animation: guessed-flash 0.7s ease-out; }
+
+/* Napis START! na środku ekranu hosta */
+.round-start-flash {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 800;
+  font-size: clamp(80px, 14vw, 200px);
+  color: var(--accent);
+  text-shadow: 0 0 30px rgba(255, 0, 85, 0.6);
+  pointer-events: none;
+  animation: start-flash 1.4s ease-out forwards;
+}
+
+/* Przełącznik dźwięku */
+.sound-toggle {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  z-index: 900;
+  min-height: 40px;
+  padding: 2px 14px;
+  font-size: 20px;
+}
+
+/* Lobby: wejście nowego gracza + wyrzucanie */
+.lobby-player { animation: slide-in 0.45s ease-out; }
+.lobby-player-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+.kick-btn {
+  background: transparent;
+  border: 2px solid #555;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+.kick-btn:hover { color: #fff; border-color: #fff; }
+.kick-btn.yes { color: var(--accent-danger); border-color: var(--accent-danger); }
+.kick-confirm { display: inline-flex; gap: 8px; }
+
+/* Poczekalnia gracza: lista połączonych osób */
+.room-players { margin-top: 24px; width: 100%; max-width: 420px; }
+.room-players h3 { font-size: 26px; color: var(--text-muted); margin-bottom: 10px; }
+.room-players ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+.room-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 6px;
+  border: 2px solid #555;
+  border-radius: 999px;
+  font-size: 22px;
+  animation: pop 0.45s ease-out;
+}
+.room-player.me { border-color: var(--accent); color: var(--accent); }
+
+/* Podium: słupki „wyrastają” po kolei (3. → 2. → 1.) */
+.podium-bar { transform-origin: bottom; animation: rise 0.8s ease-out both; }
+.podium-name { animation: fade-up 0.6s ease-out both; }
+.podium-slot.third  .podium-bar { animation-delay: 0.2s; }
+.podium-slot.third  .podium-name { animation-delay: 0.9s; }
+.podium-slot.second .podium-bar { animation-delay: 0.6s; }
+.podium-slot.second .podium-name { animation-delay: 1.3s; }
+.podium-slot.first  .podium-bar { animation-delay: 1.0s; }
+.podium-slot.first  .podium-name { animation-delay: 1.7s; }
+.results-list li { animation: fade-up 0.5s ease-out both; }
+
+/* Podpowiedź „obróć telefon” – tylko telefon w pionie */
+.rotate-hint { display: none; }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .rotate-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border: 2px solid var(--accent-warn);
+    border-radius: 10px;
+    color: var(--accent-warn);
+    font-size: 18px;
+    line-height: 1.2;
+    animation: pop 0.5s ease-out;
+  }
+  .rotate-hint button {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+  }
+}
+
+/* Osoby wrażliwe na ruch – bez animacji */
+@media (prefers-reduced-motion: reduce) {
+  .game-timer.low, .score-item.guessed, .round-start-flash,
+  .lobby-player, .room-player, .podium-bar, .podium-name,
+  .results-list li, .rotate-hint { animation: none !important; }
+}

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PlayerInfo, ChatMessage } from '../types/game'; 
 import type { SendPacketFn } from '../types/websocket';
+import '../styles/game.css';
 
 interface HostGameViewProps {
   roomCode: string;
@@ -15,8 +16,43 @@ interface HostGameViewProps {
   onLeave: () => void;
 }
 
+// Avatar z zabezpieczeniem: gdy src jest pusty albo się nie ładuje,
+// pokazujemy kółko z pierwszą literą nicka zamiast zepsutego obrazka.
+function ScoreAvatar({ src, nickname }: { src?: string; nickname: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className="avatar-round lg avatar-fallback">
+        {nickname.charAt(0).toUpperCase() || '?'}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={nickname}
+      className="avatar-round lg"
+      onError={() => {
+        console.warn('Nie załadowano avatara gracza', nickname, '→ src =', src);
+        setFailed(true);
+      }}
+    />
+  );
+}
+
 export function HostGameView({ players, currentDrawer, isRoundActive, timeLeft, chatMessages }: HostGameViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showStart, setShowStart] = useState(false);
+
+  // Krótki napis „START!” w chwili, gdy zaczyna się rysowanie
+  useEffect(() => {
+    if (!isRoundActive) return;
+    setShowStart(true);
+    const t = window.setTimeout(() => setShowStart(false), 1400);
+    return () => window.clearTimeout(t);
+  }, [isRoundActive, currentDrawer]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -28,6 +64,14 @@ export function HostGameView({ players, currentDrawer, isRoundActive, timeLeft, 
     const handleStroke = (e: CustomEvent) => {
       // Odbieramy dokładne dane zgodne z Twoim PacketBuilder.hpp
       const { x, y, prevX, prevY, color, size, isEraser } = e.detail;
+      
+      // Sygnał „wyczyść płótno” – rysownik wysyła go jako DRAW_BROADCAST z x = y = -1,
+      // bo ten pakiet serwer na pewno przekazuje do hosta.
+      if (x < 0 || y < 0) {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
       
       const realX = x * canvas.width;
       const realY = y * canvas.height;
@@ -59,75 +103,74 @@ export function HostGameView({ players, currentDrawer, isRoundActive, timeLeft, 
     window.addEventListener('clear-canvas', handleClear);
 
     return () => {
-      window.addEventListener('draw-broadcast', handleStroke as EventListener);
+      // POPRAWKA: wcześniej było addEventListener (wyciek listenerów)
+      window.removeEventListener('draw-broadcast', handleStroke as EventListener);
       window.removeEventListener('clear-canvas', handleClear);
     };
   }, []);
 
+  // POPRAWKA: kopia tablicy, żeby nie mutować propsów
+  const sortedPlayers = [...players].sort((a, b) => b.points - a.points);
+
+  // Ostatnie słowo wpisane przez każdego gracza w tej rundzie (czat jest czyszczony przy nowej rundzie)
+  const lastByPlayer = new Map<string, ChatMessage>();
+  for (const msg of chatMessages) {
+    lastByPlayer.set(msg.nickname, msg);
+  }
+
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: '#111', color: 'white' }}>
+    <div className="game-host">
+      {showStart && <div className="round-start-flash">START!</div>}
       
       {/* LEWA STRONA: Płótno i Czas */}
-      <div style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px' }}>
+      <div className="game-host-main">
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '1000px', marginBottom: '15px' }}>
-          <h2 style={{ color: '#ff0055' }}>
-            {!isRoundActive ? `${currentDrawer || 'Rysownik'} wybiera słowo...` : `Rysuje: ${currentDrawer}`}
-          </h2>
-          <h2 style={{ fontSize: '36px', color: timeLeft <= 10 ? 'red' : 'white' }}>
-            ⏱ {timeLeft}s
-          </h2>
-        </div>
-
-        <canvas
-          ref={canvasRef}
-          width={1024}
-          height={768}
-          style={{ width: '100%', maxWidth: '1000px', aspectRatio: '4/3', background: 'white', borderRadius: '15px', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}
-        />
-        <div style={{
-          width: '100%', maxWidth: '1000px', height: '180px', marginTop: '20px', 
-          background: 'rgba(0, 0, 0, 0.5)', borderRadius: '15px', padding: '15px', 
-          overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px',
-          border: '1px solid #333'
-        }}>
-          {chatMessages.map(msg => (
-            <div key={msg.id} style={{ 
-              fontSize: '20px', 
-              color: msg.type === 'correct' ? '#00ff00' : (msg.type === 'almost' ? '#ffcc00' : 'white'),
-              fontWeight: msg.type === 'correct' ? 'bold' : 'normal'
-            }}>
-              <span style={{ color: '#888', marginRight: '10px' }}>{msg.nickname}:</span>
-              {msg.type === 'almost' ? (
-                <span>{msg.text} <em style={{ fontSize: '16px' }}>(Blisko!)</em></span>
-              ) : (
-                <span>{msg.text}</span>
-              )}
+        {/* Scena: pasek + płótno 4:3 skalują się tak, żeby zawsze mieściły się w oknie */}
+        <div className="game-stage">
+          <div className="game-stage-inner">
+            <div className="game-topbar">
+              <h2 className="game-status">
+                {!isRoundActive ? `${currentDrawer || 'Rysownik'} wybiera słowo...` : `Rysuje: ${currentDrawer}`}
+              </h2>
+              <h2 className={`game-timer ${timeLeft <= 10 ? 'low' : ''}`}>
+                ⏱ {timeLeft}s
+              </h2>
             </div>
-          ))}
-          <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+
+            <div className="canvas-frame">
+              <canvas
+                ref={canvasRef}
+                width={1024}
+                height={768}
+                className="game-canvas"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* PRAWA STRONA: Tabela Graczy */}
-      <div style={{ width: '350px', background: '#1a1a1a', borderLeft: '3px solid #ff0055', padding: '20px', overflowY: 'auto' }}>
-        <h3>TABELA WYNIKÓW</h3>
-        <ul style={{ listStyleType: 'none', padding: 0, marginTop: '20px' }}>
-          {players.sort((a, b) => b.points - a.points).map((p, i) => (
-            <li key={i} style={{ 
-              display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', 
-              background: p.isGuessed ? 'rgba(0, 255, 0, 0.2)' : '#222',
-              padding: '10px', borderRadius: '10px'
-            }}>
-              <img src={p.avatar} alt="avatar" style={{ width: '50px', height: '50px', borderRadius: '50%' }} />
-              <div style={{ flex: '1' }}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{p.nickname}</div>
-                <div style={{ color: '#aaa' }}>{p.points} pkt</div>
-              </div>
-            </li>
-          ))}
+      <aside className="scoreboard">
+        <h3 className="scoreboard-title">TABELA WYNIKÓW</h3>
+        <ul className="score-list">
+          {sortedPlayers.map((p, i) => {
+            const last = lastByPlayer.get(p.nickname);
+            return (
+              <li key={i} className={`score-item ${p.isGuessed ? 'guessed' : ''}`}>
+                <ScoreAvatar src={p.avatar} nickname={p.nickname} />
+                <div className="score-info">
+                  <div className="score-nick">{p.nickname}</div>
+                  <div className="score-points">{p.points} pkt</div>
+                </div>
+                {/* Miejsce na ostatnie słowo wpisane przez gracza */}
+                <div className={`score-last-word ${last?.type ?? ''}`} title={last?.text}>
+                  {last?.text ?? ''}
+                </div>
+              </li>
+            );
+          })}
         </ul>
-      </div>
+      </aside>
 
     </div>
   );

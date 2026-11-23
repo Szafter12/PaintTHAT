@@ -104,6 +104,26 @@ export function useGameSocket({
             window.dispatchEvent(new CustomEvent('draw-broadcast', { detail: data.payload }));
             break;
 
+          // Rysownik wyczyścił płótno – czyścimy je też na ekranie hosta
+          case 'CLEAR_CANVAS':
+            window.dispatchEvent(new CustomEvent('clear-canvas'));
+            break;
+
+          // Koniec rundy / całej gry (obsługa w App.tsx)
+          case 'ROUND_END':
+            window.dispatchEvent(new CustomEvent('round-end', { detail: data.payload }));
+            break;
+
+          // Host usunął tego gracza z pokoju
+          case 'KICKED':
+            window.dispatchEvent(new CustomEvent('kicked', { detail: data.payload }));
+            break;
+
+          case 'GAME_OVER':
+          case 'GAME_ENDED':
+            window.dispatchEvent(new CustomEvent('game-over', { detail: data.payload }));
+            break;
+
           case 'ERROR':
             onRoomError(data.payload.code, data.payload.message);
             break;

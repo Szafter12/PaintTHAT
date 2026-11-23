@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoomRequest } from './api/roomsApi';
 import { useGameSocket } from './hooks/useGameSocket';
 import { PlayerDrawView } from './views/PlayerDrawView';
@@ -17,6 +17,11 @@ import { PlayerMenuView } from './views/PlayerMenuView';
 import { PlayerRoomView } from './views/PlayerRoomView';
 import { PlayerGuessView } from './views/PlayerGuessView';
 import { HostGameView } from './views/HostGameView';
+import { HostResultsView } from './views/HostResultsView';
+import { NoticeHost } from './views/NoticeHost';
+import { showNotice } from './hooks/notice';
+import { playSound } from './hooks/sounds';
+import { SoundToggle } from './views/SoundToggle';
 
 export function App() {
   const [currentView, setCurrentView] = useState<AppView>('menu');
@@ -30,9 +35,50 @@ export function App() {
   const [roundTimeLeft, setRoundTimeLeft] = useState<number>(0);
   const [isRoundActive, setIsRoundActive] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [lastSettings, setLastSettings] = useState<
+    { maxRounds: number; roundTime: number; customWords: string[] } | undefined
+  >(undefined);
+
+  // Licznik rund (jedna runda = jedno rysowanie) – do wykrycia końca gry po stronie hosta
+  const roundsPlayedRef = useRef(0);
+  const maxRoundsRef = useRef(0);
+  const userRoleRef = useRef<UserRole | null>(null);
+  userRoleRef.current = userRole;
+  const playerNicknameRef = useRef('');
+  playerNicknameRef.current = playerData?.nickname || '';
+  const roundStartedRef = useRef(false); // czy w tej rundzie zabrzmiał już dźwięk startu
+
+  // Koniec gry: ROUND_END ostatniej rundy albo pakiet GAME_OVER z serwera
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const finishGame = () => {
+      window.clearTimeout(timer);
+      // Chwila na obejrzenie ostatniego rysunku, potem ekran wyników
+      timer = window.setTimeout(() => {
+        setIsRoundActive(false);
+        setCurrentView(userRoleRef.current === 'host' ? 'hostResults' : 'playerRoom');
+      }, 2000);
+    };
+
+    const handleRoundEnd = () => {
+      if (userRoleRef.current !== 'host' || maxRoundsRef.current <= 0) return;
+      roundsPlayedRef.current += 1;
+      if (roundsPlayedRef.current >= maxRoundsRef.current) finishGame();
+    };
+
+    window.addEventListener('round-end', handleRoundEnd);
+    window.addEventListener('game-over', finishGame);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('round-end', handleRoundEnd);
+      window.removeEventListener('game-over', finishGame);
+    };
+  }, []);
 
   useEffect(() => {
     const handleChooseWord = (e: any) => {
+      roundStartedRef.current = false;
       setCurrentDrawer(playerData?.nickname || 'Ja'); 
       setWordOptions(e.detail || []); 
       setIsRoundActive(false); 
@@ -42,6 +88,7 @@ export function App() {
     };
 
     const handleWaitingForWord = (e: any) => {
+      roundStartedRef.current = false;
       setCurrentDrawer(e.detail);
       setWordOptions([]);
       setIsRoundActive(false);
@@ -51,6 +98,12 @@ export function App() {
     };
 
     const handleTimeLeft = (e: any) => {
+      // Dźwięki tylko na ekranie hosta: start rundy i tykanie w ostatnich 10 s
+      if (userRoleRef.current === 'host') {
+        if (!roundStartedRef.current) playSound('start');
+        else if (e.detail > 0 && e.detail <= 10) playSound('tick');
+      }
+      roundStartedRef.current = true;
       setRoundTimeLeft(e.detail);
       setIsRoundActive(true);
     };
@@ -114,6 +167,10 @@ export function App() {
   }, [userRole]);
 
   const handlePlayerGuessed = useCallback((nickname: string, earnedPoints: number) => {
+    // Host słyszy każde trafienie, gracz tylko własne
+    if (userRoleRef.current === 'host' || nickname === playerNicknameRef.current) {
+      playSound('correct');
+    }
     setConnectedPlayers((prev) =>
       prev.map((p) =>
         p.nickname === nickname
@@ -132,7 +189,7 @@ export function App() {
     onGameStarted: handleGameStarted,
     onPlayerGuessed: handlePlayerGuessed,
     onRoomError: (code, message) => {
-      alert(`Odłączono: ${message}`);
+      showNotice(message, { title: 'Odłączono' });
       if (code === 'ROOM_NOT_FOUND' || code === 'ROOM_EXISTS') {
         closeSocket();
         setRoomCode(null);
@@ -153,7 +210,30 @@ export function App() {
   };
 
   const handleStartGame = (settings: GameSettings) => {
-    sendPacket('START_GAME', settings);
+    // customWords to dane tylko dla frontendu – serwer dostaje dotychczasowy pakiet
+    const { customWords, ...packet } = settings;
+    setLastSettings({
+      maxRounds: settings.maxRounds,
+      roundTime: settings.roundTime,
+      customWords: customWords ?? [],
+    });
+    roundsPlayedRef.current = 0;
+    maxRoundsRef.current = settings.maxRounds;
+    sendPacket('START_GAME', packet);
+  };
+
+  // Ekran wyników → ustawienia pokoju (można zacząć jeszcze raz)
+  const handleBackToLobby = () => {
+    roundsPlayedRef.current = 0;
+    setChatMessages([]);
+    setCurrentDrawer(null);
+    setWordOptions([]);
+    setIsRoundActive(false);
+    setRoundTimeLeft(0);
+    setConnectedPlayers((prev) =>
+      prev.map((p) => ({ ...p, points: 0, isGuessed: false, isDrawer: false }))
+    );
+    setCurrentView('host');
   };
 
   const handleLeaveRoom = () => {
@@ -164,6 +244,23 @@ export function App() {
     setConnectedPlayers([]);
     setCurrentView('menu');
   };
+
+  // Host usuwa gracza z lobby (serwer powinien rozłączyć gracza i wysłać KICKED)
+  const handleKickPlayer = (nickname: string) => {
+    sendPacket('KICK_PLAYER', { nickname });
+    setConnectedPlayers((prev) => prev.filter((p) => p.nickname !== nickname));
+  };
+
+  // Gracz dostał informację, że host go usunął
+  useEffect(() => {
+    const handleKicked = () => {
+      if (userRoleRef.current !== 'player') return;
+      handleLeaveRoom();
+      showNotice('Host usunął Cię z pokoju.', { title: 'Wyrzucono' });
+    };
+    window.addEventListener('kicked', handleKicked);
+    return () => window.removeEventListener('kicked', handleKicked);
+  }, []);
 
   const hasLocalPlayerGuessed = connectedPlayers.find(p => p.nickname === playerData?.nickname)?.isGuessed || false;
 
@@ -189,6 +286,8 @@ export function App() {
           players={connectedPlayers}
           roomCode={roomCode}
           onStartGame={handleStartGame}
+          initialSettings={lastSettings}
+          onKickPlayer={handleKickPlayer}
           onLogout={handleLeaveRoom}
         />
       )}
@@ -211,6 +310,7 @@ export function App() {
           roomCode={roomCode}
           nickname={playerData.nickname}
           avatar={playerData.avatar}
+          players={connectedPlayers}
           onLeave={handleLeaveRoom}
         />
       )}
@@ -255,6 +355,15 @@ export function App() {
           onLeave={handleLeaveRoom}
         />
       )}
+
+      {currentView === 'hostResults' && (
+        <HostResultsView players={connectedPlayers} onBack={handleBackToLobby} />
+      )}
+
+      {userRole === 'host' && currentView !== 'menu' && <SoundToggle />}
+
+      {/* Okno komunikatów (zamiast alert()) – musi być zamontowane raz, na wierzchu */}
+      <NoticeHost />
     </>
   );
 }

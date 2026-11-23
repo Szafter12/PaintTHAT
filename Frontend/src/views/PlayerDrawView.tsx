@@ -1,5 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { SendPacketFn } from '../types/websocket';
+import '../styles/menu.css';
+import '../styles/game.css';
 
 interface PlayerDrawViewProps {
   nickname: string;
@@ -8,14 +11,32 @@ interface PlayerDrawViewProps {
   sendPacket: SendPacketFn;
 }
 
+const PALETTE = [
+  '#000000', '#7f7f7f', '#ffffff', '#ff0000',
+  '#ff7f00', '#ffd800', '#00c000', '#00c8c8',
+  '#0050ff', '#7a00ff', '#ff4fd8', '#8b4513',
+  '#ffb6a0', '#006400', '#800000', '#000080',
+];
+
 export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: PlayerDrawViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   
-  const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(false);
   const [color, setColor] = useState('#000000');
   const [size, setSize] = useState(5);
   const [isEraser, setIsEraser] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(false);
+
+  // Na telefonie blokujemy „pull to refresh” i przewijanie strony podczas rysowania.
+  useEffect(() => {
+    if (!isRoundActive) return;
+    const prev = document.body.style.overscrollBehavior;
+    document.body.style.overscrollBehavior = 'none';
+    return () => {
+      document.body.style.overscrollBehavior = prev;
+    };
+  }, [isRoundActive]);
 
   const draw = (x: number, y: number) => {
     if (!canvasRef.current || !lastPosRef.current) return;
@@ -61,33 +82,34 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     lastPosRef.current = { x, y };
   };
 
-  const getPointerPos = (e: any) => {
+  const getPointerPos = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: ((clientX - rect.left) / rect.width) * canvas.width,
-      y: ((clientY - rect.top) / rect.height) * canvas.height
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
     };
   };
 
-  const startDrawing = (e: any) => {
-    setIsDrawing(true);
+  // Pointer Events: jedna obsługa dla palca, rysika i myszy.
+  // setPointerCapture – linia nie urywa się, gdy palec wyjedzie poza płótno.
+  const startDrawing = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDrawingRef.current = true;
     const pos = getPointerPos(e);
     lastPosRef.current = pos;
     draw(pos.x, pos.y);
   };
 
-  const drawMove = (e: any) => {
-    if (!isDrawing) return;
+  const drawMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
     const pos = getPointerPos(e);
     draw(pos.x, pos.y);
   };
 
   const stopDrawing = () => {
-    setIsDrawing(false);
+    isDrawingRef.current = false;
     lastPosRef.current = null;
   };
 
@@ -95,6 +117,12 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    // Host dostaje sygnał jako zwykły DRAW_BROADCAST z x = y = -1 (serwer go przekazuje),
+    // dodatkowo wysyłamy osobny pakiet CLEAR_CANVAS na wypadek, gdyby serwer go obsługiwał.
+    sendPacket('DRAW_BROADCAST', {
+      x: -1, y: -1, prevX: -1, prevY: -1,
+      color: '#000000', size: 1, isEraser: false,
+    });
     sendPacket('CLEAR_CANVAS', {});
   };
 
@@ -103,32 +131,23 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
   // ---------------------------------------------------------
   if (!isRoundActive) {
     return (
-      <div className="menu" style={{ textAlign: 'center', padding: '20px', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <h2 style={{ color: 'white', marginBottom: '20px' }}>Wybierz hasło:</h2>
+      <div className="menu player-screen">
+        <h2>Wybierz hasło:</h2>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div className="word-choice">
           {/* Zabezpieczenie przed brakiem danych z C++ */}
           {wordOptions && wordOptions.length > 0 ? (
             wordOptions.map((word, index) => (
               <button 
                 key={index} 
-                className="game-input" 
-                style={{ 
-                  cursor: 'pointer', 
-                  fontSize: '24px', 
-                  padding: '15px',
-                  backgroundColor: 'white',
-                  color: 'black',
-                  border: '3px solid #ff0055',
-                  borderRadius: '10px'
-                }}
+                className="word-btn"
                 onClick={() => sendPacket('PICKED_WORD', { guessWord: word })}
               >
                 {word}
               </button>
             ))
           ) : (
-            <p style={{ color: 'gray', fontSize: '18px' }}>
+            <p className="empty-text">
               Oczekiwanie na słowa od serwera... 
               (Jeśli to trwa długo, upewnij się, że serwer wysłał tablicę słów w pakiecie CHOOSE_WORD).
             </p>
@@ -142,45 +161,84 @@ export function PlayerDrawView({ wordOptions, isRoundActive, sendPacket }: Playe
   // EKRAN RYSOWANIA (Aktywuje się, gdy C++ zacznie odliczać czas)
   // ---------------------------------------------------------
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#222', minHeight: '100vh', padding: '10px' }}>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', width: '100%', justifyContent: 'center' }}>
-        <input 
-          type="color" 
-          value={color} 
-          onChange={e => { setColor(e.target.value); setIsEraser(false); }} 
-          style={{ width: '50px', height: '40px' }} 
+    <div className="draw-screen">
+      {/* Widoczne tylko na wąskim ekranie w pionie (patrz CSS) */}
+      {!hintDismissed && (
+        <div className="rotate-hint">
+          <span>📱 Obróć telefon poziomo – będziesz mieć większe płótno</span>
+          <button onClick={() => setHintDismissed(true)} aria-label="Zamknij podpowiedź">×</button>
+        </div>
+      )}
+
+      <div className="canvas-frame draw-canvas-frame">
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={600}
+          className="game-canvas"
+          onPointerDown={startDrawing}
+          onPointerMove={drawMove}
+          onPointerUp={stopDrawing}
+          onPointerCancel={stopDrawing}
         />
-        <input 
-          type="range" 
-          min="2" max="20" 
-          value={size} 
-          onChange={e => setSize(Number(e.target.value))} 
-        />
-        <button 
-          onClick={() => setIsEraser(!isEraser)} 
-          style={{ background: isEraser ? '#ff0055' : '#555', color: 'white', border: 'none', padding: '0 15px', borderRadius: '5px' }}>
-          Gumka
-        </button>
-        <button 
-          onClick={handleClear} 
-          style={{ background: 'red', color: 'white', border: 'none', padding: '0 15px', borderRadius: '5px' }}>
-          Wyczyść
-        </button>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        width={800}
-        height={600}
-        style={{ width: '100%', maxWidth: '800px', aspectRatio: '4/3', background: 'white', borderRadius: '10px', touchAction: 'none' }}
-        onMouseDown={startDrawing}
-        onMouseMove={drawMove}
-        onMouseUp={stopDrawing}
-        onMouseOut={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={drawMove}
-        onTouchEnd={stopDrawing}
-      />
+      <div className="draw-tools">
+        <div className="palette">
+          {PALETTE.map((c) => (
+            <button
+              key={c}
+              className={`swatch ${!isEraser && color === c ? 'selected' : ''}`}
+              style={{ backgroundColor: c }}
+              aria-label={`Kolor ${c}`}
+              onClick={() => { setColor(c); setIsEraser(false); }}
+            />
+          ))}
+          {/* Własny kolor – systemowy wybierak */}
+          <label
+            className={`swatch custom ${!isEraser && !PALETTE.includes(color) ? 'selected' : ''}`}
+            aria-label="Własny kolor"
+          >
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => { setColor(e.target.value); setIsEraser(false); }}
+            />
+          </label>
+        </div>
+
+        <div className="size-row">
+          <div className="size-preview">
+            <span
+              style={{
+                width: Math.min(size, 40),
+                height: Math.min(size, 40),
+                backgroundColor: isEraser ? '#fff' : color,
+              }}
+            />
+          </div>
+          <input
+            type="range"
+            className="size-input"
+            min="2"
+            max="40"
+            value={size}
+            onChange={(e) => setSize(Number(e.target.value))}
+          />
+        </div>
+
+        <div className="tool-buttons">
+          <button
+            className={`game-btn ${isEraser ? 'active' : ''}`}
+            onClick={() => setIsEraser(!isEraser)}
+          >
+            Gumka
+          </button>
+          <button className="game-btn danger" onClick={handleClear}>
+            Wyczyść
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

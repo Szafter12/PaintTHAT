@@ -1,0 +1,87 @@
+/* Importuj ten plik jako OSTATNI (np. w main.tsx), żeby nadpisywał resztę. */
+
+@media (max-width: 800px) {
+    .game-host {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        width: 100%;
+    }
+
+    .scoreboard {
+        width: auto;
+        margin: 0 20px 20px;
+    }
+
+    .game-status {
+        font-size: 26px;
+    }
+
+    .game-timer {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 600px) {
+    .game-input {
+        width: 100%;
+    }
+
+    .control-group label {
+        font-size: 26px;
+    }
+
+    .menu {
+        padding: 20px 10px;
+    }
+
+    .avatar-selection {
+        gap: 10px;
+    }
+
+    .avatar-display {
+        width: 180px;
+        height: 180px;
+    }
+
+    .menu-buttons,
+    .host-section {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .start-button,
+    .host-button,
+    .player-button,
+    .signin-button,
+    .signup-button {
+        width: 150px;
+        height: 75px;
+    }
+
+    .return-button {
+        width: 135px;
+        height: 68px;
+    }
+
+    .host-header {
+        padding: 10px 15px;
+    }
+
+    .host-logo {
+        width: 130px;
+        height: 35px;
+    }
+
+    .player-screen h2 {
+        font-size: 32px;
+    }
+
+    .room-title {
+        font-size: 42px;
+    }
+
+    .word-btn {
+        font-size: 26px;
+    }
+}
