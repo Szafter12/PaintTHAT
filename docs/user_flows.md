@@ -1,3 +1,4 @@
+![user flow diagram](img/mermaid-diagram-2026-11-24-001603.png)
 
 ## 2. Powiązanie kroków ze stanami i makietami High-Fi
 
